@@ -1,0 +1,68 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# AWS Amplify build spec — Tramps Aviation B2B (Next.js 14, App Router)
+# ─────────────────────────────────────────────────────────────────────────────
+# How Amplify works (similar to Vercel / Netlify):
+#   • Connect your GitHub / GitLab / Bitbucket / CodeCommit repo to Amplify
+#     once via the AWS console — Amplify clones the repo, watches the chosen
+#     branch, and rebuilds on every push.
+#   • This file is auto-detected at the repo root (you don't pick it manually).
+#   • Each phase is a list of shell commands run on a managed Linux build host.
+#   • `artifacts.baseDirectory: .next` is what gets deployed — Amplify's
+#     Next.js runtime picks SSR up automatically from there.
+#
+# Required environment variables (set in App settings → Environment variables):
+#   • NEXT_PUBLIC_API_URL=https://api.your-domain.com/api
+#   • NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_live_xxxxxxxxxx
+#
+# Tips:
+#   • If you bump the Node version, also update `engines.node` in package.json.
+#   • Build cache below cuts ~60% off subsequent builds; leave it enabled.
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: 1
+
+frontend:
+  phases:
+    preBuild:
+      commands:
+        # Pin Node 20 LTS — matches local dev and Next 14 supported range.
+        - nvm use 20 || nvm install 20
+
+        # Use Yarn (matches `packageManager: yarn@1.22.22` in package.json).
+        # `yarn install --frozen-lockfile` is the CI equivalent of `npm ci`:
+        # it uses yarn.lock verbatim and fails fast if it's out of sync.
+        - corepack enable || true
+        - yarn install --frozen-lockfile
+
+    build:
+      commands:
+        - echo "Building Tramps Aviation B2B for Amplify…"
+        - yarn build
+
+  artifacts:
+    # Next.js SSR needs the entire .next directory deployed. Amplify's
+    # Next.js compute layer reads from here at request time.
+    baseDirectory: .next
+    files:
+      - "**/*"
+
+  cache:
+    # Speeds up subsequent builds — yarn's cache + node_modules + .next/cache
+    # are the three big wins. Tailwind / SWC also benefit from .next/cache.
+    paths:
+      - node_modules/**/*
+      - .next/cache/**/*
+      - .yarn/cache/**/*
+
+  customHeaders:
+    # Sensible security defaults — tighten as needed for your domain.
+    - pattern: "**/*"
+      headers:
+        - key: "X-Frame-Options"
+          value: "SAMEORIGIN"
+        - key: "X-Content-Type-Options"
+          value: "nosniff"
+        - key: "Referrer-Policy"
+          value: "strict-origin-when-cross-origin"
+        - key: "Permissions-Policy"
+          value: "camera=(), microphone=(), geolocation=()"

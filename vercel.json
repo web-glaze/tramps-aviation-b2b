@@ -1,0 +1,38 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+
+  "// purpose": "Vercel auto-detects Next.js + Yarn (because of yarn.lock) without this file. We keep it for explicit build pinning + env-var documentation so cloning + deploying stays predictable.",
+
+  "framework": "nextjs",
+  "buildCommand": "yarn build",
+  "installCommand": "yarn install --frozen-lockfile",
+  "outputDirectory": ".next",
+
+  "// envs":  "These keys must be set in Project Settings → Environment Variables. The frontend reads NEXT_PUBLIC_* at build time, so changing them requires a redeploy.",
+  "env": {
+    "NEXT_PUBLIC_API_URL": "@next_public_api_url",
+    "NEXT_PUBLIC_RAZORPAY_KEY_ID": "@next_public_razorpay_key_id"
+  },
+
+  "// regions": "iad1 = US East. Switch to bom1 (Mumbai) once the backend moves regional, and Razorpay is closer to the user.",
+  "regions": ["iad1"],
+
+  "// headers": "Mirror of the security defaults set in amplify.yml / netlify.toml so behaviour is consistent across hosts.",
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Frame-Options",        "value": "SAMEORIGIN" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy",        "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy",     "value": "camera=(), microphone=(), geolocation=()" }
+      ]
+    },
+    {
+      "source": "/_next/static/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    }
+  ]
+}

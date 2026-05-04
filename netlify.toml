@@ -1,0 +1,52 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Netlify config — Tramps Aviation B2B (Next.js 14, App Router)
+# ─────────────────────────────────────────────────────────────────────────────
+# Netlify auto-detects Next.js, but pinning everything in this file keeps
+# behaviour reproducible across forks / preview deploys.
+#
+# Required environment variables (set in Site settings → Environment):
+#   • NEXT_PUBLIC_API_URL
+#   • NEXT_PUBLIC_RAZORPAY_KEY_ID
+# ─────────────────────────────────────────────────────────────────────────────
+
+[build]
+  # `yarn install --frozen-lockfile` matches CI hygiene — fails on out-of-sync
+  # lockfile. Equivalent of `npm ci` for the Yarn world.
+  command = "yarn install --frozen-lockfile && yarn build"
+  publish = ".next"
+
+[build.environment]
+  # Pin Node version — Netlify supports 18, 20, 22. Match local dev.
+  NODE_VERSION = "20"
+  # Tells Netlify which package manager to use; otherwise it auto-picks
+  # based on which lockfile is present (yarn.lock → yarn).
+  NPM_FLAGS = "--version"
+  # Disable Next.js telemetry to keep build logs clean.
+  NEXT_TELEMETRY_DISABLED = "1"
+
+# Required for Next.js 14 App Router — handles SSR, ISR, and API routes
+# transparently. The plugin is preinstalled on Netlify's build image, so
+# no need to add it as a devDependency.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Sensible security headers — tighten CSP for your prod domain later.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options          = "SAMEORIGIN"
+    X-Content-Type-Options   = "nosniff"
+    Referrer-Policy          = "strict-origin-when-cross-origin"
+    Permissions-Policy       = "camera=(), microphone=(), geolocation=()"
+
+# Cache static assets aggressively. Next.js fingerprints filenames in
+# `_next/static`, so 1y immutable is safe.
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/logo.svg"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
