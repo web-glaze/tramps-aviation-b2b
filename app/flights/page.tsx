@@ -14,7 +14,7 @@
  *   agentApi.confirmB2bBooking()→ deduct wallet + confirm
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plane, ArrowRight, ArrowLeftRight, Search, X, Plus, Minus,
@@ -1254,7 +1254,7 @@ const DEFAULT_SEARCH: SearchParams = {
   tripType: "OneWay",
 };
 
-export default function FlightsPage() {
+function FlightsPageContent() {
   usePlatformStore().fetchIfStale();
 
   const [searchParams, setSearchParams] = useState<SearchParams>(DEFAULT_SEARCH);
@@ -1704,5 +1704,18 @@ export default function FlightsPage() {
       )}
     </div>
     </PublicPageChrome>
+  );
+}
+
+// ─── Default export — Suspense wrapper required by Next.js ──────────────────
+// `useSearchParams()` inside a client component triggers a CSR-bailout error
+// during `next build` unless the consumer is wrapped in a Suspense boundary.
+// We render `null` as the fallback because the inner page already handles
+// its own loading states; the wrapper exists only to satisfy the build.
+export default function FlightsPage() {
+  return (
+    <Suspense fallback={null}>
+      <FlightsPageContent />
+    </Suspense>
   );
 }

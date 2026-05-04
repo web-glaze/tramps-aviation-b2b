@@ -8,7 +8,7 @@
  * Search flow: city autocomplete → date picker → results → booking via wallet
  */
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, Suspense } from "react";
 import {
   Hotel,
   Search,
@@ -411,7 +411,7 @@ function HotelSkeleton() {
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
-export default function HotelsPage() {
+function HotelsPageContent() {
   const [form, setForm] = useState<SearchForm>({
     cityCode: "",
     cityName: "",
@@ -769,5 +769,18 @@ export default function HotelsPage() {
       )}
     </div>
     </PublicPageChrome>
+  );
+}
+
+// ─── Default export — Suspense wrapper required by Next.js ──────────────────
+// `useSearchParams()` inside a client component triggers a CSR-bailout error
+// during `next build` unless the consumer is wrapped in a Suspense boundary.
+// Fallback is `null` because the inner page handles its own loading states;
+// the wrapper exists only to satisfy the build.
+export default function HotelsPage() {
+  return (
+    <Suspense fallback={null}>
+      <HotelsPageContent />
+    </Suspense>
   );
 }

@@ -10,7 +10,7 @@
  * Reused by B2B via: app/b2b/series-fare/page.tsx → dynamic(() => import("../../series-fare/page"))
  */
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plane,
@@ -622,7 +622,7 @@ function FareSkeleton() {
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
-export default function SeriesFarePage() {
+function SeriesFarePageContent() {
   const router = useRouter();
 
   const [form, setForm] = useState<SearchForm>({
@@ -1229,5 +1229,18 @@ export default function SeriesFarePage() {
       )}
     </div>
     </PublicPageChrome>
+  );
+}
+
+// ─── Default export — Suspense wrapper required by Next.js ──────────────────
+// `useSearchParams()` inside a client component triggers a CSR-bailout error
+// during `next build` unless the consumer is wrapped in a Suspense boundary.
+// Fallback is `null` because the inner page handles its own loading states;
+// the wrapper exists only to satisfy the build.
+export default function SeriesFarePage() {
+  return (
+    <Suspense fallback={null}>
+      <SeriesFarePageContent />
+    </Suspense>
   );
 }
