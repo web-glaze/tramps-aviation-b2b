@@ -3,9 +3,9 @@
  * ║  TRAMPS AVIATION — GLOBAL THEME TOKENS                              ║
  * ║  Single source of truth. Change here → updates everywhere.          ║
  * ║                                                                      ║
- * ║  Brand Colors:                                                       ║
- * ║    Orange  #e44b0f  (vivid orange — accents, prices, highlights)    ║
- * ║    Azure   #208dcb  (primary blue — buttons, active states, links)  ║
+ * ║  Brand Colors (sampled from public/logo.svg):                       ║
+ * ║    Blue    #209ACD  (≈80% of UI — buttons, active states, links)    ║
+ * ║    Orange  #CF4D26  (≈20% accent — prices, hero CTAs, highlights)   ║
  * ╚══════════════════════════════════════════════════════════════════════╝
  *
  * HOW TO CHANGE THE THEME:
@@ -20,15 +20,15 @@
  *   className={T.text.muted}       → muted text
  */
 
-// ─── Brand Palette ────────────────────────────────────────────────────────────
+// ─── Brand Palette — sampled directly from public/logo.svg ──────────────────
 export const BRAND = {
-  /** Vivid orange #e44b0f — prices, Book Now CTAs, stat numbers, exclusive badges, agent CTA */
-  orange:     '#e44b0f',
-  orangeHsl:  '16 82% 48%',
+  /** Brand orange #CF4D26 — prices, Book Now CTAs, stat numbers, agent CTAs */
+  orange:     '#CF4D26',
+  orangeHsl:  '14 69% 48%',
 
-  /** Azure blue #208dcb — search button, active nav, sign in button, links, info */
-  azure:      '#208dcb',
-  azureHsl:   '205 72% 45%',
+  /** Brand blue #209ACD — search button, active nav, sign in button, links */
+  azure:      '#209ACD',
+  azureHsl:   '198 73% 46%',
 } as const;
 
 // ─── Semantic color tokens (map to Tailwind CSS variable classes) ─────────────
@@ -66,7 +66,7 @@ export const T = {
     /** Danger — red */
     danger:    'bg-destructive text-destructive-foreground font-semibold rounded-xl hover:opacity-90 transition-all',
     /** Book Now / Register / Create Account / Agent Portal CTA — orange */
-    orange:    'bg-[#e44b0f] text-white font-semibold rounded-xl hover:opacity-90 transition-all active:scale-[0.98]',
+    orange:    'bg-[#CF4D26] text-white font-semibold rounded-xl hover:opacity-90 transition-all active:scale-[0.98]',
     /** Small primary */
     sm:        'bg-primary text-primary-foreground text-sm font-semibold px-4 py-1.5 rounded-lg hover:opacity-90 transition-all',
   },
@@ -90,7 +90,7 @@ export const T = {
     /** Primary color text (azure) */
     primary:   'text-primary',
     /** Orange accent text */
-    orange:    'text-[#e44b0f]',
+    orange:    'text-[#CF4D26]',
     /** Error text */
     error:     'text-destructive',
     /** Success text */
@@ -106,7 +106,7 @@ export const T = {
   // ── Badges / Pills ────────────────────────────────────────────────────────
   badge: {
     primary:   'bg-primary/10 text-primary border border-primary/20 text-xs font-semibold px-2.5 py-1 rounded-full',
-    orange:    'bg-[#e44b0f]/10 text-[#e44b0f] border border-[#e44b0f]/20 text-xs font-semibold px-2.5 py-1 rounded-full',
+    orange:    'bg-[#CF4D26]/10 text-[#CF4D26] border border-[#CF4D26]/20 text-xs font-semibold px-2.5 py-1 rounded-full',
     success:   'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-xs font-semibold px-2.5 py-1 rounded-full',
     warning:   'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 text-xs font-semibold px-2.5 py-1 rounded-full',
     error:     'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 text-xs font-semibold px-2.5 py-1 rounded-full',

@@ -9,6 +9,21 @@
 ════════════════════════════════════════════════════════ */
 
 :root {
+  /* ── Tramps Aviation brand tokens ─────────────────────────────────────
+     Sampled directly from `public/logo.svg`:
+       Brand Blue   #209ACD  → hsl(198, 73%, 46%)   (≈80% of UI)
+       Brand Orange #CF4D26  → hsl( 14, 69%, 48%)   (≈20% accent)
+     Update these two and the entire site rebrands.                       */
+  --brand-blue:        198 73% 46%;
+  --brand-blue-dark:   199 73% 35%;
+  --brand-blue-light:  197 73% 75%;
+  --brand-blue-tint:   197 73% 95%;
+
+  --brand-orange:       14 69% 48%;
+  --brand-orange-dark:  14 69% 35%;
+  --brand-orange-light: 14 80% 80%;
+  --brand-orange-tint:  14 80% 96%;
+
   --background: 210 28% 95%;
   --card: 0 0% 100%;
   --popover: 0 0% 100%;
@@ -16,9 +31,10 @@
   --card-foreground: 220 40% 11%;
   --popover-foreground: 220 40% 11%;
   --muted-foreground: 220 14% 44%;
-  --primary: 205 72% 42%;
+  /* Primary = brand blue */
+  --primary: 198 73% 46%;
   --primary-foreground: 0 0% 100%;
-  --ring: 205 72% 42%;
+  --ring: 198 73% 46%;
   --secondary: 210 22% 90%;
   --secondary-foreground: 220 30% 22%;
   --muted: 210 22% 92%;
@@ -29,8 +45,6 @@
   --border: 210 20% 87%;
   --input: 210 20% 90%;
   --radius: 0.75rem;
-  --brand-orange: 16 82% 46%;
-  --brand-blue: 205 72% 42%;
   --toggle-knob: 0 0% 100%;
 }
 
@@ -41,7 +55,8 @@
   --card-foreground: 210 18% 90%;
   --popover: 222 22% 11%;
   --popover-foreground: 210 18% 90%;
-  --primary: 205 72% 52%;
+  /* Dark mode brand-blue (slightly brighter for contrast on dark bg) */
+  --primary: 198 73% 56%;
   --primary-foreground: 0 0% 100%;
   --secondary: 222 18% 17%;
   --secondary-foreground: 210 18% 82%;
@@ -53,13 +68,22 @@
   --destructive-foreground: 0 0% 100%;
   --border: 222 16% 18%;
   --input: 222 16% 18%;
-  --ring: 205 72% 52%;
+  --ring: 198 73% 56%;
   --toggle-knob: 210 20% 85%;
+  /* Brand tokens for dark mode */
+  --brand-blue:        198 73% 56%;
+  --brand-blue-dark:   199 73% 40%;
+  --brand-blue-light:  197 73% 65%;
+  --brand-blue-tint:   197 30% 18%;
+  --brand-orange:       14 75% 55%;
+  --brand-orange-dark:  14 70% 40%;
+  --brand-orange-light: 14 80% 70%;
+  --brand-orange-tint:  14 30% 18%;
 }
 
 /* ── Color Themes ── */
 [data-color="brand"] {
-  --primary: 205 72% 42%;
+  --primary: 198 73% 46%;
 }
 [data-color="blue"] {
   --primary: 221 83% 53%;
@@ -80,7 +104,7 @@
   --primary-foreground: 0 0% 98%;
 }
 .dark[data-color="brand"] {
-  --primary: 205 72% 52%;
+  --primary: 198 73% 56%;
 }
 .dark[data-color="blue"] {
   --primary: 217 91% 62%;
@@ -220,37 +244,96 @@ select option:hover {
 }
 
 /* ════════════════════════════════════════════════════════
-   BUTTONS
+   BUTTONS — brand-strong styling (≈80% blue, ≈20% orange)
 ════════════════════════════════════════════════════════ */
 .btn-primary {
-  @apply inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-all
-         bg-primary text-primary-foreground;
+  @apply inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-all text-white;
+  background: linear-gradient(135deg, hsl(var(--brand-blue)) 0%, hsl(var(--brand-blue-dark)) 100%);
+  box-shadow: 0 2px 10px hsl(var(--brand-blue) / 0.3);
 }
 .btn-primary:hover {
-  opacity: 0.92;
+  box-shadow: 0 4px 16px hsl(var(--brand-blue) / 0.45);
+  transform: translateY(-1px);
 }
 .btn-primary:active {
   transform: scale(0.98);
 }
 
+/* Orange CTA — used sparingly for hero / "Search" / final-step buttons */
 .btn-orange {
   @apply inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-all text-white;
-  background-color: hsl(var(--brand-orange));
+  background: linear-gradient(135deg, hsl(var(--brand-orange)) 0%, hsl(var(--brand-orange-dark)) 100%);
+  box-shadow: 0 2px 10px hsl(var(--brand-orange) / 0.3);
 }
 .btn-orange:hover {
-  opacity: 0.92;
+  box-shadow: 0 4px 16px hsl(var(--brand-orange) / 0.45);
+  transform: translateY(-1px);
 }
 .btn-orange:active {
   transform: scale(0.98);
 }
 
 .btn-outline {
-  @apply inline-flex items-center justify-center gap-2 font-semibold rounded-xl border border-border
-         text-foreground transition-all hover:bg-muted;
+  @apply inline-flex items-center justify-center gap-2 font-semibold rounded-xl border-2 transition-all;
+  border-color: hsl(var(--brand-blue));
+  color: hsl(var(--brand-blue));
+  background: hsl(var(--brand-blue-tint));
 }
+.btn-outline:hover {
+  background: hsl(var(--brand-blue-light) / 0.4);
+  border-color: hsl(var(--brand-blue-dark));
+  color: hsl(var(--brand-blue-dark));
+}
+
 .btn-ghost {
   @apply inline-flex items-center justify-center gap-2 font-medium rounded-xl
          text-muted-foreground transition-all hover:bg-muted hover:text-foreground;
+}
+
+/* ════════════════════════════════════════════════════════
+   BRAND UTILITY CLASSES — drop-in helpers for any component
+════════════════════════════════════════════════════════ */
+/* Text */
+.text-brand-blue   { color: hsl(var(--brand-blue)); }
+.text-brand-orange { color: hsl(var(--brand-orange)); }
+
+/* Backgrounds */
+.bg-brand-blue        { background-color: hsl(var(--brand-blue)); }
+.bg-brand-blue-tint   { background-color: hsl(var(--brand-blue-tint)); }
+.bg-brand-orange      { background-color: hsl(var(--brand-orange)); }
+.bg-brand-orange-tint { background-color: hsl(var(--brand-orange-tint)); }
+
+/* Borders */
+.border-brand-blue   { border-color: hsl(var(--brand-blue)); }
+.border-brand-orange { border-color: hsl(var(--brand-orange)); }
+
+/* Gradients (used in heroes, banners, page headers) */
+.bg-brand-gradient {
+  background: linear-gradient(135deg, hsl(var(--brand-blue)) 0%, hsl(var(--brand-blue-dark)) 100%);
+}
+.bg-brand-gradient-orange {
+  background: linear-gradient(135deg, hsl(var(--brand-orange)) 0%, hsl(var(--brand-orange-dark)) 100%);
+}
+.bg-brand-gradient-mix {
+  /* Blue → Orange — use VERY sparingly (banners, dividers, focus rings) */
+  background: linear-gradient(135deg, hsl(var(--brand-blue)) 0%, hsl(var(--brand-orange)) 100%);
+}
+.bg-brand-soft-mesh {
+  /* Subtle blue + orange tinted background for hero / card sections */
+  background-image:
+    radial-gradient(at 5% 0%,   hsl(var(--brand-blue) / 0.10) 0, transparent 45%),
+    radial-gradient(at 95% 100%, hsl(var(--brand-orange) / 0.08) 0, transparent 45%),
+    linear-gradient(180deg, hsl(var(--brand-blue-tint) / 0.4) 0%, hsl(var(--card)) 100%);
+}
+
+/* Brand 3-stripe accent — useful as a thin top stripe on cards */
+.brand-stripe {
+  background: linear-gradient(90deg,
+    hsl(var(--brand-blue))   0%,
+    hsl(var(--brand-blue))   75%,
+    hsl(var(--brand-orange)) 75%,
+    hsl(var(--brand-orange)) 100%);
+  height: 4px;
 }
 
 /* ════════════════════════════════════════════════════════
@@ -278,9 +361,16 @@ select option:hover {
 .search-hero .search-panel {
   @apply bg-muted/30 border border-border rounded-2xl;
 }
+/* Search button = brand orange (the BIG 20% accent moment on every page) */
 .search-hero .search-button {
-  @apply bg-primary text-primary-foreground border border-primary font-semibold
-         hover:opacity-90 shadow-sm transition-opacity;
+  @apply text-white font-bold transition-all;
+  background: linear-gradient(135deg, hsl(var(--brand-orange)) 0%, hsl(var(--brand-orange-dark)) 100%);
+  border: 1px solid hsl(var(--brand-orange-dark));
+  box-shadow: 0 2px 10px hsl(var(--brand-orange) / 0.3);
+}
+.search-hero .search-button:hover {
+  box-shadow: 0 4px 16px hsl(var(--brand-orange) / 0.45);
+  transform: translateY(-1px);
 }
 .search-hero .search-note {
   @apply bg-muted/50 border border-border rounded-xl text-muted-foreground;
@@ -316,7 +406,14 @@ select option:hover {
   @apply bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400;
 }
 .badge-blue {
-  @apply bg-primary/10 text-primary;
+  background-color: hsl(var(--brand-blue-tint));
+  color: hsl(var(--brand-blue-dark));
+  border: 1px solid hsl(var(--brand-blue) / 0.25);
+}
+.badge-orange {
+  background-color: hsl(var(--brand-orange-tint));
+  color: hsl(var(--brand-orange-dark));
+  border: 1px solid hsl(var(--brand-orange) / 0.25);
 }
 .badge-muted {
   @apply bg-muted text-muted-foreground;
@@ -367,11 +464,18 @@ select option:hover {
 }
 
 /* ════════════════════════════════════════════════════════
-   PRICE TEXT
+   PRICE TEXT — brand orange, this is the dominant orange touchpoint
 ════════════════════════════════════════════════════════ */
 .price-text {
   color: hsl(var(--brand-orange));
-  @apply font-bold;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.price-text-large {
+  color: hsl(var(--brand-orange));
+  font-weight: 800;
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
 }
 
 /* ════════════════════════════════════════════════════════
@@ -471,13 +575,24 @@ select option:hover {
 }
 
 /* ════════════════════════════════════════════════════════
-   NAV
+   NAV — strong brand-blue active state, orange left rail accent
 ════════════════════════════════════════════════════════ */
 .nav-active {
-  @apply bg-primary/10 text-primary font-semibold rounded-xl;
+  background: linear-gradient(135deg, hsl(var(--brand-blue)) 0%, hsl(var(--brand-blue-dark)) 100%);
+  color: white;
+  font-weight: 700;
+  border-radius: var(--radius);
+  box-shadow: 0 2px 8px hsl(var(--brand-blue) / 0.3);
+  border-left: 3px solid hsl(var(--brand-orange));
 }
+.nav-active:hover { color: white; }
 .nav-item {
-  @apply text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-all;
+  @apply rounded-xl transition-all font-medium;
+  color: hsl(var(--muted-foreground));
+}
+.nav-item:hover {
+  background: hsl(var(--brand-blue-tint));
+  color: hsl(var(--brand-blue-dark));
 }
 
 /* ════════════════════════════════════════════════════════
@@ -496,13 +611,23 @@ select option:hover {
 }
 
 /* ════════════════════════════════════════════════════════
-   SIDEBAR (B2B)
+   SIDEBAR (B2B) — strong brand-blue active, orange left rail accent
 ════════════════════════════════════════════════════════ */
 .sidebar-item {
-  @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all;
+  @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all;
+  color: hsl(var(--muted-foreground));
+}
+.sidebar-item:hover {
+  background: hsl(var(--brand-blue-tint));
+  color: hsl(var(--brand-blue-dark));
+  transform: translateX(2px);
 }
 .sidebar-item-active {
-  @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium bg-primary text-primary-foreground shadow-sm;
+  @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all;
+  background: linear-gradient(135deg, hsl(var(--brand-blue)) 0%, hsl(var(--brand-blue-dark)) 100%);
+  color: white;
+  box-shadow: 0 2px 10px hsl(var(--brand-blue) / 0.35);
+  border-left: 3px solid hsl(var(--brand-orange));
 }
 
 /* ════════════════════════════════════════════════════════
@@ -563,10 +688,12 @@ input[type="date"]::-webkit-calendar-picker-indicator {
    HERO BG / MESH
 ════════════════════════════════════════════════════════ */
 .mesh-bg {
+  /* Brand-mix mesh: blue dominates, orange accents the corners */
   background-image:
-    radial-gradient(at 30% 15%, hsl(var(--primary) / 0.06) 0, transparent 55%),
-    radial-gradient(at 80% 5%, hsl(var(--primary) / 0.04) 0, transparent 50%),
-    radial-gradient(at 5% 60%, hsl(var(--primary) / 0.05) 0, transparent 45%);
+    radial-gradient(at 30% 15%, hsl(var(--brand-blue)   / 0.10) 0, transparent 55%),
+    radial-gradient(at 80% 5%,  hsl(var(--brand-blue)   / 0.06) 0, transparent 50%),
+    radial-gradient(at 5% 60%,  hsl(var(--brand-blue)   / 0.07) 0, transparent 45%),
+    radial-gradient(at 95% 95%, hsl(var(--brand-orange) / 0.08) 0, transparent 45%);
 }
 .glass {
   background: hsl(var(--card) / 0.85);

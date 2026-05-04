@@ -49,7 +49,12 @@ export default function RootLayout({
           content="Tramps Aviation B2B portal for travel agents."
         />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/logo.svg" type="image/jpeg" />
+        {/* Brand-blue theme colour (matches logo blue #209ACD) */}
+        <meta name="theme-color" content="#209ACD" />
+        {/* Favicons — point at the SVG logo for crisp rendering at any size */}
+        <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+        <link rel="alternate icon" href="/favicon.ico" />
+        <link rel="mask-icon" href="/logo.svg" color="#209ACD" />
         <link rel="apple-touch-icon" href="/logo.svg" />
         <script dangerouslySetInnerHTML={{ __html: ANTI_FLASH }} />
       </head>

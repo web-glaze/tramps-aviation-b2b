@@ -112,13 +112,14 @@ function CompactHeader({ pathname }: { pathname: string }) {
   const showOnlyLogin    = pathname.startsWith("/b2b/register");
 
   return (
-    <header className="w-full border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-30">
+    <header className="w-full bg-card/85 backdrop-blur-sm sticky top-0 z-30 shadow-[0_2px_8px_rgba(32,154,205,0.08)]">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
         {/* Brand */}
         <Link href="/" className="flex items-center gap-2.5 group">
           <B2BLogo size="sm" />
-          <span className="font-bold text-sm text-foreground hidden sm:block group-hover:text-primary transition-colors">
-            Tramps Aviation B2B
+          <span className="font-extrabold text-sm hidden sm:block transition-colors text-[hsl(var(--brand-blue))] group-hover:text-[hsl(var(--brand-blue-dark))]">
+            Tramps Aviation
+            <span className="ml-1.5 text-[10px] font-bold tracking-[0.12em] uppercase text-[hsl(var(--brand-orange))]">B2B</span>
           </span>
         </Link>
 
@@ -256,8 +257,7 @@ function FullHeader() {
   return (
     <>
       {/* Main navbar — fixed; b2b/layout adds matching pt-[…] to <main> */}
-      <header className="fixed top-0 left-0 right-0 z-40 bg-background/95 dark:bg-card/95 backdrop-blur-xl border-b border-border">
-
+      <header className="fixed top-0 left-0 right-0 z-40 bg-background/95 dark:bg-card/95 backdrop-blur-xl shadow-[0_2px_10px_rgba(32,154,205,0.08)]">
         {/* Row 1: Brand + center nav + actions */}
         <div className="h-16 flex items-center px-4 sm:px-6 gap-4">
           {/* Mobile hamburger */}
@@ -275,10 +275,10 @@ function FullHeader() {
               <AppLogo size="h-9 w-9" />
             </div>
             <div className="hidden sm:block">
-              <p className="font-extrabold text-sm leading-none text-foreground group-hover:text-primary transition-colors">
+              <p className="font-extrabold text-sm leading-none text-[hsl(var(--brand-blue))] group-hover:text-[hsl(var(--brand-blue-dark))] transition-colors tracking-tight">
                 {platformName}
               </p>
-              <p className="text-[10px] text-muted-foreground mt-0.5 tracking-wider uppercase">
+              <p className="text-[10px] font-bold text-[hsl(var(--brand-orange))] mt-0.5 tracking-[0.12em] uppercase">
                 Agent Portal
               </p>
             </div>
@@ -296,8 +296,8 @@ function FullHeader() {
                   className={cn(
                     "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap",
                     active
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted",
+                      ? "bg-[hsl(var(--brand-blue))] text-white shadow-md shadow-[hsl(var(--brand-blue))]/30 border-b-2 border-[hsl(var(--brand-orange))]"
+                      : "text-muted-foreground hover:text-[hsl(var(--brand-blue))] hover:bg-[hsl(var(--brand-blue-tint))]",
                   )}
                 >
                   <Icon className="h-3.5 w-3.5" />
@@ -313,8 +313,8 @@ function FullHeader() {
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap",
                   B2B_SIDEBAR_MORE.some((i) => isActive(i.href))
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted",
+                    ? "bg-[hsl(var(--brand-blue))] text-white shadow-md shadow-[hsl(var(--brand-blue))]/30 border-b-2 border-[hsl(var(--brand-orange))]"
+                    : "text-muted-foreground hover:text-[hsl(var(--brand-blue))] hover:bg-[hsl(var(--brand-blue-tint))]",
                 )}
                 aria-haspopup="menu"
                 aria-expanded={moreMenuOpen}
@@ -368,7 +368,7 @@ function FullHeader() {
             {/* Wallet shortcut with live balance check badge */}
             <Link
               href="/b2b/wallet"
-              className="relative h-9 w-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/5 hover:border-primary/30 transition-all group"
+              className="relative h-9 w-9 rounded-xl border-2 border-[hsl(var(--brand-blue-light))] bg-[hsl(var(--brand-blue-tint))] flex items-center justify-center text-[hsl(var(--brand-blue))] hover:bg-[hsl(var(--brand-blue))] hover:text-white hover:border-[hsl(var(--brand-blue))] transition-all group"
               title={liveBalance !== null ? `Wallet: ₹${liveBalance.toLocaleString("en-IN")}` : "Wallet"}
             >
               <Wallet className="h-4 w-4" />
@@ -388,11 +388,12 @@ function FullHeader() {
             </button>
 
             <button
-              className="relative h-9 w-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+              className="relative h-9 w-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-[hsl(var(--brand-blue))] hover:bg-[hsl(var(--brand-blue-tint))] hover:border-[hsl(var(--brand-blue-light))] transition-all"
               title="Notifications"
             >
               <Bell className="h-4 w-4" />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary" />
+              {/* Brand-orange notification dot — the 20% accent moment */}
+              <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-[hsl(var(--brand-orange))] ring-2 ring-background animate-pulse" />
             </button>
 
             {/* User dropdown */}
@@ -402,7 +403,7 @@ function FullHeader() {
                   onClick={() => setUserMenuOpen((v) => !v)}
                   className="flex items-center gap-2 p-1 rounded-xl hover:bg-muted transition-colors"
                 >
-                  <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0">
+                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[hsl(var(--brand-blue))] to-[hsl(var(--brand-blue-dark))] flex items-center justify-center text-white font-bold text-sm flex-shrink-0 ring-2 ring-[hsl(var(--brand-orange-light))] shadow-sm">
                     {userInitial}
                   </div>
                   <div className="hidden lg:block text-left pr-1">
@@ -466,7 +467,7 @@ function FullHeader() {
         </div>
 
         {/* Row 2: scrollable secondary nav (md to <xl) */}
-        <div className="hidden md:block xl:hidden border-t border-border bg-muted/20">
+        <div className="hidden md:block xl:hidden bg-muted/20">
           <div className="flex items-center gap-1 px-4 py-2 overflow-x-auto scrollbar-thin">
             {[...B2B_SIDEBAR_NAV, ...B2B_SIDEBAR_MORE].map((item) => {
               const Icon = item.icon!;
@@ -477,7 +478,9 @@ function FullHeader() {
                   href={item.href}
                   className={cn(
                     "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap flex-shrink-0",
-                    active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted",
+                    active
+                      ? "bg-[hsl(var(--brand-blue))] text-white shadow-sm ring-2 ring-[hsl(var(--brand-orange))]/40"
+                      : "text-muted-foreground hover:text-[hsl(var(--brand-blue))] hover:bg-[hsl(var(--brand-blue-tint))]",
                   )}
                 >
                   <Icon className="h-3.5 w-3.5" />
@@ -490,7 +493,7 @@ function FullHeader() {
 
         {/* Mobile-only page-title strip */}
         {pageTitle && (
-          <div className="md:hidden px-4 pb-2 border-t border-border bg-muted/10">
+          <div className="md:hidden px-4 pb-2 bg-muted/10">
             <p className="text-sm font-bold text-foreground pt-2">{pageTitle}</p>
           </div>
         )}
@@ -525,14 +528,16 @@ function FullHeader() {
             {liveBalance !== null && (
               <Link
                 href="/b2b/wallet"
-                className="mx-3 mt-3 mb-2 flex items-center gap-3 p-3 rounded-xl border border-primary/25 bg-primary/5 hover:bg-primary/10 transition-colors"
+                className="mx-3 mt-3 mb-2 flex items-center gap-3 p-3 rounded-xl border-2 border-[hsl(var(--brand-blue-light))] bg-[hsl(var(--brand-blue-tint))] hover:bg-[hsl(var(--brand-blue-light))]/40 transition-colors relative overflow-hidden"
               >
-                <div className="h-9 w-9 rounded-lg bg-primary/15 flex items-center justify-center">
-                  <Wallet className="h-4 w-4 text-primary" />
+                {/* Brand-orange corner accent */}
+                <span className="absolute top-0 right-0 w-12 h-12 bg-[hsl(var(--brand-orange))]/10 rounded-bl-full" />
+                <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-[hsl(var(--brand-blue))] to-[hsl(var(--brand-blue-dark))] flex items-center justify-center shadow-md">
+                  <Wallet className="h-4 w-4 text-white" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide leading-none">Wallet Balance</p>
-                  <p className="text-base font-bold text-foreground mt-1">₹{liveBalance.toLocaleString("en-IN")}</p>
+                <div className="flex-1 min-w-0 relative">
+                  <p className="text-[10px] font-bold text-[hsl(var(--brand-orange))] uppercase tracking-wide leading-none">Wallet Balance</p>
+                  <p className="text-lg font-extrabold text-[hsl(var(--brand-blue-dark))] mt-1">₹{liveBalance.toLocaleString("en-IN")}</p>
                 </div>
               </Link>
             )}
@@ -547,7 +552,9 @@ function FullHeader() {
                     href={item.href}
                     className={cn(
                       "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
-                      active ? "bg-primary text-primary-foreground shadow-sm" : "text-foreground hover:bg-muted",
+                      active
+                        ? "bg-[hsl(var(--brand-blue))] text-white shadow-md shadow-[hsl(var(--brand-blue))]/30 border-l-4 border-[hsl(var(--brand-orange))] font-bold"
+                        : "text-foreground hover:bg-[hsl(var(--brand-blue-tint))] hover:text-[hsl(var(--brand-blue))]",
                     )}
                   >
                     <Icon className="h-4 w-4 flex-shrink-0" />
@@ -566,7 +573,9 @@ function FullHeader() {
                     href={item.href}
                     className={cn(
                       "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
-                      active ? "bg-primary text-primary-foreground shadow-sm" : "text-foreground hover:bg-muted",
+                      active
+                        ? "bg-[hsl(var(--brand-blue))] text-white shadow-md shadow-[hsl(var(--brand-blue))]/30 border-l-4 border-[hsl(var(--brand-orange))] font-bold"
+                        : "text-foreground hover:bg-[hsl(var(--brand-blue-tint))] hover:text-[hsl(var(--brand-blue))]",
                     )}
                   >
                     <Icon className="h-4 w-4 flex-shrink-0" />
@@ -586,7 +595,9 @@ function FullHeader() {
                     href={item.href}
                     className={cn(
                       "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
-                      active ? "bg-primary text-primary-foreground shadow-sm" : "text-foreground hover:bg-muted",
+                      active
+                        ? "bg-[hsl(var(--brand-blue))] text-white shadow-md shadow-[hsl(var(--brand-blue))]/30 border-l-4 border-[hsl(var(--brand-orange))] font-bold"
+                        : "text-foreground hover:bg-[hsl(var(--brand-blue-tint))] hover:text-[hsl(var(--brand-blue))]",
                     )}
                   >
                     <Icon className="h-4 w-4 flex-shrink-0" />
@@ -599,7 +610,7 @@ function FullHeader() {
             {user && (
               <div className="border-t border-border p-3 flex-shrink-0">
                 <div className="flex items-center gap-2.5 mb-2 px-1">
-                  <div className="h-9 w-9 rounded-full bg-primary/15 flex items-center justify-center text-primary font-bold text-sm">
+                  <div className="h-9 w-9 rounded-full bg-gradient-to-br from-[hsl(var(--brand-blue))] to-[hsl(var(--brand-blue-dark))] flex items-center justify-center text-white font-bold text-sm ring-2 ring-[hsl(var(--brand-orange-light))]">
                     {userInitial}
                   </div>
                   <div className="min-w-0 flex-1">

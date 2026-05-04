@@ -95,7 +95,8 @@ export async function openRazorpay(opts: RazorpayOpenOptions): Promise<RazorpayS
         contact: opts.prefill?.contact || "",
         name:    opts.prefill?.name    || "",
       },
-      theme: { color: opts.themeColor || "#208dcb" },
+      // Razorpay checkout matches the Tramps Aviation brand blue (logo colour)
+      theme: { color: opts.themeColor || "#209ACD" },
       modal: {
         ondismiss: () => {
           // User closed the checkout — treat as cancel.

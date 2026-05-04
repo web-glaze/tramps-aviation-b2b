@@ -77,8 +77,8 @@ const COMPACT_LINKS = [
 
 function CompactFooter() {
   return (
-    <footer className="border-t border-border bg-card/50 py-4 px-4">
-      <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
+    <footer className="bg-card/50 shadow-[0_-2px_8px_rgba(32,154,205,0.05)]">
+      <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
         <span>
           © {new Date().getFullYear()} Tramps Aviation B2B. All rights reserved.
         </span>
@@ -204,7 +204,7 @@ function FullFooter() {
     .filter((s) => s.url);
 
   return (
-    <footer className="bg-card border-t border-border mt-16">
+    <footer className="bg-card mt-16 shadow-[0_-2px_10px_rgba(32,154,205,0.06)]">
       {/* ─── Section 1: brand + nav columns + contact ──────────────────── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-14 pb-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
@@ -218,10 +218,10 @@ function FullFooter() {
                 <AppLogo size="h-11 w-11" />
               </div>
               <div>
-                <span className="font-extrabold text-base leading-tight block text-foreground group-hover:text-primary transition-colors">
+                <span className="font-extrabold text-base leading-tight block text-[hsl(var(--brand-blue))] group-hover:text-[hsl(var(--brand-blue-dark))] transition-colors tracking-tight">
                   {name}
                 </span>
-                <span className="text-[10px] text-muted-foreground tracking-wider uppercase">
+                <span className="text-[10px] font-bold text-[hsl(var(--brand-orange))] tracking-[0.12em] uppercase">
                   {tagline}
                 </span>
               </div>
@@ -241,7 +241,7 @@ function FullFooter() {
                       rel="noopener noreferrer"
                       aria-label={label}
                       title={label}
-                      className="h-9 w-9 rounded-xl border border-border bg-background hover:bg-primary hover:border-primary hover:text-white flex items-center justify-center transition-all text-muted-foreground"
+                      className="h-9 w-9 rounded-xl border border-border bg-background hover:bg-[hsl(var(--brand-blue))] hover:border-[hsl(var(--brand-blue))] hover:text-white hover:shadow-md hover:shadow-[hsl(var(--brand-blue))]/30 hover:-translate-y-0.5 flex items-center justify-center transition-all text-muted-foreground"
                     >
                       <Icon className="h-4 w-4" />
                     </a>
@@ -352,7 +352,7 @@ function FullFooter() {
       </div>
 
       {/* ─── Section 2: Trust badges ──────────────────────────────────── */}
-      <div className="border-t border-border">
+      <div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-wrap items-center justify-center gap-8">
           {[
             {
@@ -360,7 +360,7 @@ function FullFooter() {
               text: "SSL Secured",
             },
             {
-              icon: <BadgeCheck className="h-3.5 w-3.5 text-[#208dcb]" />,
+              icon: <BadgeCheck className="h-3.5 w-3.5 text-[#209ACD]" />,
               text: "IATA Accredited",
             },
             {
@@ -383,7 +383,7 @@ function FullFooter() {
       </div>
 
       {/* ─── Section 3: Copyright ─────────────────────────────────────── */}
-      <div className="border-t border-border bg-muted/20">
+      <div className="bg-muted/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <p className="text-xs text-muted-foreground text-center sm:text-left">
             © {new Date().getFullYear()} {copyright}
