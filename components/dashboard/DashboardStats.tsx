@@ -10,6 +10,7 @@ import { formatCurrency, formatNumber } from "@/lib/utils";
 export function DashboardStats() {
   const { stats, loading, fetchStats } = useStatsStore();
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchStats(); }, []);
 
   const cards = [

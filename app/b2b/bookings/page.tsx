@@ -54,6 +54,7 @@ export default function B2bBookingsPage() {
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [reviewBooking, setReviewBooking] = useState<any>(null);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load() }, [page, statusFilter]);
 
   const load = async () => {
@@ -92,13 +93,39 @@ export default function B2bBookingsPage() {
     } finally { setCancelling(null) }
   };
 
-  const filtered = search
-    ? bookings.filter(b =>
-        (b.bookingRef || '').toLowerCase().includes(search.toLowerCase()) ||
-        (b.pnr || '').toLowerCase().includes(search.toLowerCase()) ||
-        (b.contactName || '').toLowerCase().includes(search.toLowerCase())
-      )
-    : bookings;
+  // Pre-fix: search only checked bookingRef / pnr / contactName, so an
+  // agent looking up "Sandeep Kumar" or "DEL → BOM" or "6E-211" got no
+  // matches even though the data was right there in the table. Now we
+  // build a single haystack per booking covering ref, PNR, all passenger
+  // names, route, airline, flight number, contact email/phone, and the
+  // booking date as YYYY-MM-DD.
+  const filtered = (() => {
+    if (!search.trim()) return bookings;
+    const q = search.toLowerCase().trim();
+    return bookings.filter((b: any) => {
+      const seg = b.segments?.[0] || {};
+      const pax = b.passengers || [];
+      const blob = [
+        b.bookingRef,
+        b.pnr,
+        b.contactName,
+        b.contactEmail,
+        b.contactPhone,
+        seg.origin,
+        seg.destination,
+        seg.airline,
+        seg.flightNumber,
+        seg.origin && seg.destination ? `${seg.origin} ${seg.destination}` : "",
+        ...pax.map((p: any) => `${p.firstName || ""} ${p.lastName || ""}`.trim()),
+        b.createdAt ? new Date(b.createdAt).toISOString().slice(0, 10) : "",
+        String(b.fare?.customerFare ?? b.totalAmount ?? ""),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return blob.includes(q);
+    });
+  })();
 
   return (
     <div className="space-y-6">

@@ -127,16 +127,32 @@ export const agentApi = {
   // Legacy — kept for backwards compatibility, points to OLD single-step endpoint
   // Use initBooking + confirmB2bBooking instead for all new code
   bookFlight: (data: any) => {
-    // Generate idempotency key if not already provided by caller
-    const idempotencyKey = data._idempotencyKey || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    // Pre-fix: idempotency key was `Date.now() + Math.random().toString(36)`,
+    // which has measurable collision risk on rapid retries (same ms + same
+    // random bucket on a poor PRNG). Use crypto.randomUUID where available —
+    // a true v4 UUID with negligible collision probability.
+    const idempotencyKey =
+      data._idempotencyKey ||
+      (typeof crypto !== "undefined" &&
+      typeof (crypto as any).randomUUID === "function"
+        ? (crypto as any).randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
     const { _idempotencyKey: _removed, ...payload } = data;
     return apiClient.post("/bookings/agent/flight", payload, {
       headers: { "X-Idempotency-Key": idempotencyKey },
     });
   },
-  // Topup request
-  requestTopup: (data: { amount: number; utrNumber?: string }) =>
+  // Topup request — manual bank/UPI flow. Admin reviews UTR + credits.
+  requestTopup: (data: { amount: number; utrNumber?: string; note?: string }) =>
     apiClient.post("/agents/wallet/topup-request", data),
+  // Topup via Razorpay — self-serve. Two-step: create order → verify.
+  createTopupOrder: (amount: number) =>
+    apiClient.post("/agents/wallet/topup-order", { amount }),
+  verifyTopupPayment: (payload: {
+    razorpayOrderId: string;
+    razorpayPaymentId: string;
+    razorpaySignature: string;
+  }) => apiClient.post("/agents/wallet/topup-verify", payload),
   // ── Sub-Agent management ──────────────────────────────────────────────────
   getSubAgents: () => apiClient.get("/agents/subagents"),
   createSubAgent: (data: { name: string; email: string; phone?: string; password: string }) =>
@@ -168,7 +184,10 @@ export const agentApi = {
 // CUSTOMER (B2C) — always real API
 // ═════════════════════════════════════════════════════════════════════════════
 export const customerApi = {
-  getProfile: () => apiClient.get("/customer/profile"),
+  // Pre-fix: this was "/customer/profile" (singular) but the backend
+  // controller is @Controller('customers') (plural) — every request
+  // 404'd silently. Aligned to plural to match the actual route.
+  getProfile: () => apiClient.get("/customers/profile"),
   getBookings: (p?: any) => apiClient.get("/bookings/my", { params: p }),
   // Same as agentApi.cancelBooking — backend uses POST + bookingRef.
   cancelBooking: (bookingRef: string, reason?: string) =>

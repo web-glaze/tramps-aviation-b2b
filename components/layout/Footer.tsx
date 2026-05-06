@@ -159,6 +159,7 @@ function FullFooter() {
   const { ps, fetchIfStale } = usePlatformStore();
   useEffect(() => {
     fetchIfStale();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Logged-in agents browsing /flights etc. should bounce to the /b2b/* mirror

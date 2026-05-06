@@ -63,6 +63,7 @@ export function useDisplayPrice(product: Product) {
 
   // Lazy-fetch in case some entry-point rendered the page before the store
   // got primed. fetchIfStale is a no-op if data is fresh.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchIfStale(); }, []);
 
   const adminPercent =

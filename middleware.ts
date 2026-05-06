@@ -56,6 +56,39 @@ function isPublicPage(pathname: string): boolean {
   return false;
 }
 
+/**
+ * Best-effort JWT inspection at the edge.
+ *
+ * Pre-fix: middleware just checked that the `auth_token` cookie existed;
+ * it never decoded the JWT. That meant a stale/expired token still let
+ * users into protected pages (where the SPA would later 401 and redirect
+ * back to login — confusing UX, and a security smell because the page
+ * shell briefly renders).
+ *
+ * We can't verify the HMAC signature in middleware (we don't ship the
+ * JWT_SECRET to the edge runtime, and the secret should never leave the
+ * backend). But we *can* parse the payload and reject obviously expired
+ * tokens — that catches the common case of "token from yesterday".
+ * The backend remains the authoritative validator.
+ */
+function isLikelyValidJwt(token: string | undefined): boolean {
+  if (!token) return false;
+  const parts = token.split(".");
+  if (parts.length !== 3) return false;
+  try {
+    const json = JSON.parse(
+      Buffer.from(parts[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8"),
+    );
+    if (json.exp && typeof json.exp === "number") {
+      const nowSec = Math.floor(Date.now() / 1000);
+      if (json.exp < nowSec) return false; // expired
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get("auth_token")?.value;
@@ -71,12 +104,15 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Anything else under /b2b/* needs an auth token
+  // Anything else under /b2b/* needs a non-expired auth token
   if (pathname.startsWith("/b2b/")) {
-    if (!token) {
+    if (!isLikelyValidJwt(token)) {
       const url = new URL("/b2b/login", request.url);
       url.searchParams.set("redirect", pathname);
-      return NextResponse.redirect(url);
+      // Drop the bad cookie so the next request doesn't loop on it.
+      const res = NextResponse.redirect(url);
+      if (token) res.cookies.delete("auth_token");
+      return res;
     }
     return NextResponse.next();
   }

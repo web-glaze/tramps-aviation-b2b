@@ -19,6 +19,7 @@ export function UsersTable() {
   const { users, meta, loading, fetchUsers, deleteUser, setPage, setSearch } = useUsersStore();
   const [searchVal, setSearchVal] = useState("");
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchUsers(); }, []);
 
   const handleSearch = (val: string) => {

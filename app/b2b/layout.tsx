@@ -78,6 +78,7 @@ export default function B2BLayout({ children }: { children: React.ReactNode }) {
     }
 
     setChecked(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [_hasHydrated, isAuthenticated, role, pathname, user]);
 
   // Spinner while checking

@@ -206,6 +206,7 @@ export function SeriesFareBookingDialog({
       const bal = useWalletStore.getState().balance;
       if (bal !== null) setWalletBalance(bal);
     }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const hasBalance = walletBalance !== null && walletBalance >= totalDue;
@@ -495,7 +496,7 @@ export function SeriesFareBookingDialog({
               <Loader2 className="h-10 w-10 animate-spin text-primary" />
               <p className="text-sm font-semibold">Confirming your booking…</p>
               <p className="text-xs text-muted-foreground text-center max-w-xs">
-                Don't refresh or close this window. We're debiting your wallet and reserving your seat.
+                Don&apos;t refresh or close this window. We&apos;re debiting your wallet and reserving your seat.
               </p>
             </div>
           )}

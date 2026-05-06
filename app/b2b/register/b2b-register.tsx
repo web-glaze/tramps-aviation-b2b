@@ -866,7 +866,7 @@ export default function B2BRegisterPage() {
                 }}
               >
                 <Info style={{ width: 12, height: 12, flexShrink: 0 }} />
-                Optional — leave blank if you don't have GST/PAN yet. Upload
+                Optional — leave blank if you don&apos;t have GST/PAN yet. Upload
                 actual documents in KYC section after registration.
               </div>
               <div
@@ -1035,7 +1035,7 @@ export default function B2BRegisterPage() {
                           marginTop: "0.25rem",
                         }}
                       >
-                        ❌ Passwords don't match
+                        ❌ Passwords don&apos;t match
                       </p>
                     )}
                   {form.confirmPassword &&

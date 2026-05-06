@@ -216,6 +216,7 @@ function HotelImage({ src, alt }: { src?: string; alt: string }) {
   return (
     <div className="h-20 w-24 shrink-0 rounded-xl bg-muted flex items-center justify-center overflow-hidden">
       {src && !failed ? (
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
           alt={alt}

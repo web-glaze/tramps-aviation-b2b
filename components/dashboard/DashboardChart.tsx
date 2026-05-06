@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 export function DashboardChart() {
   const { stats, loading, fetchStats } = useStatsStore();
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchStats(); }, []);
 
   const chartData = stats?.chartData ?? [];

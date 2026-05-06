@@ -185,7 +185,7 @@ export default function B2BLoginPage() {
 
             <div className="mt-5 pt-5 border-t border-border text-center">
               <p className="text-sm text-muted-foreground">
-                Don't have an account?{" "}
+                Don&apos;t have an account?{" "}
                 <Link href="/b2b/register" className="text-primary font-semibold hover:underline">Register Agency</Link>
               </p>
             </div>

@@ -1200,7 +1200,7 @@ function SeriesFarePageContent() {
           </div>
           <h3 className="font-semibold text-lg mb-2">Exclusive Series Fares</h3>
           <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-            Search to discover Tramps Aviation's exclusive contracted fares — lower base prices with agent commission built in.
+            Search to discover Tramps Aviation&apos;s exclusive contracted fares — lower base prices with agent commission built in.
           </p>
           <div className="mt-6 grid grid-cols-3 gap-4 max-w-md mx-auto text-sm">
             {[

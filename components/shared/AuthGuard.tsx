@@ -24,6 +24,7 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
       if (role === 'agent') router.push('/b2b/dashboard')
       else router.push('/flights')   // was /b2c/flights — now common page
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, user, role, requiredRole])
 
   if (!token || !user) return null

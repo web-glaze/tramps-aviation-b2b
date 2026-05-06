@@ -78,7 +78,7 @@ export default function B2BForgotPasswordPage() {
               <KeyRound className="h-6 w-6 text-primary" />
             </div>
             <h1 className="font-bold text-2xl text-foreground">Reset Password</h1>
-            <p className="text-sm text-muted-foreground mt-1">We'll send a 6-digit OTP to your email</p>
+            <p className="text-sm text-muted-foreground mt-1">We&apos;ll send a 6-digit OTP to your email</p>
           </div>
 
           {/* Step indicator */}
@@ -107,7 +107,7 @@ export default function B2BForgotPasswordPage() {
             {step === "email" && (
               <>
                 <h2 className="text-lg font-bold text-foreground mb-1">Enter your email</h2>
-                <p className="text-sm text-muted-foreground mb-5">We'll send a 6-digit code to reset your password.</p>
+                <p className="text-sm text-muted-foreground mb-5">We&apos;ll send a 6-digit code to reset your password.</p>
                 <form onSubmit={handleSendOtp} className="space-y-4">
                   <div>
                     <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-1.5">Business Email</label>
@@ -161,7 +161,7 @@ export default function B2BForgotPasswordPage() {
                       type="password" value={confirmPwd} onChange={(e) => setConfirm(e.target.value)} required placeholder="Re-enter password"
                       className={`${INPUT_CLS} ${confirmPwd && confirmPwd !== newPwd ? "border-red-500 focus:border-red-500" : ""}`}
                     />
-                    {confirmPwd && confirmPwd !== newPwd && <p className="text-red-500 text-xs mt-1">❌ Passwords don't match</p>}
+                    {confirmPwd && confirmPwd !== newPwd && <p className="text-red-500 text-xs mt-1">❌ Passwords don&apos;t match</p>}
                     {confirmPwd && confirmPwd === newPwd && newPwd.length >= 8 && <p className="text-emerald-500 text-xs mt-1">✅ Passwords match</p>}
                   </div>
                   <button type="submit" disabled={loading || newPwd.length < 8 || newPwd !== confirmPwd} className={BTN_CLS}>

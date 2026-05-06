@@ -35,12 +35,23 @@ import { useDisplayPrice } from "@/lib/hooks/useDisplayPrice";
 import { PublicPageChrome } from "@/components/layout/PublicPageChrome";
 import { useSearchParams } from "next/navigation";
 import { usePersistedState } from "@/lib/hooks/usePersistedState";
+import { MultiCityResults } from "@/components/flights/MultiCityResults";
 
 // ═══════════════════════════════════════════════════════════
 // TYPES
 // ══════════════════════════════════���════════════════════════
 
-type TripType = "OneWay" | "RoundTrip";
+type TripType = "OneWay" | "RoundTrip" | "MultiCity";
+
+// Multi-city leg shape — used only when tripType === "MultiCity".
+// Min 2 legs, max 4 (TBO/Amadeus practical cap).
+export interface MultiCityLeg {
+  from: string;
+  fromLabel: string;
+  to: string;
+  toLabel: string;
+  date: string; // YYYY-MM-DD
+}
 type CabinClass = "ECONOMY" | "PREMIUM_ECONOMY" | "BUSINESS" | "FIRST";
 type PassengerType = "ADT" | "CHD" | "INF";
 type SortKey = "price" | "duration" | "departure" | "arrival";
@@ -58,6 +69,12 @@ interface SearchParams {
   infants: number;
   cabinClass: CabinClass;
   tripType: TripType;
+  /** Only populated when tripType === "MultiCity". 2–4 entries. */
+  legs?: MultiCityLeg[];
+  /** Filter: show only non-stop flights. */
+  directOnly?: boolean;
+  /** Filter: airline IATA code whitelist. Empty = all airlines. */
+  airlines?: string[];
 }
 
 interface Flight {
@@ -676,6 +693,7 @@ function BookingSheet({
       const bal = useWalletStore.getState().balance;
       if (bal !== null) setWalletBalance(bal);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Validation ───────────────────────────────────────────
@@ -1202,7 +1220,7 @@ function BookingSheet({
         </div>
 
         {/* Footer action */}
-        {(step === "passengers" || step === "review") && (
+        {(step === "passengers" || step === "review" || step === "confirming") && (
           <div className="px-5 py-4 border-t border-border bg-card flex-shrink-0">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -1308,7 +1326,10 @@ function FlightsPageContent() {
     setSearched(true);
     setSelectedFlight(null);
     try {
-      const res = await searchApi.searchFlights({
+      // Pre-fix: only one-way / round-trip were sent to the backend; multi-city
+      // and the new directOnly / airlines filters were never plumbed through.
+      const isMultiCity = p.tripType === "MultiCity";
+      const payload: any = {
         origin: p.origin,
         destination: p.destination,
         departureDate: p.departureDate,
@@ -1316,11 +1337,40 @@ function FlightsPageContent() {
         children: p.children,
         infants: p.infants,
         cabinClass: p.cabinClass,
-        tripType: p.tripType,
+        // Backend expects snake_case enum values
+        tripType: isMultiCity
+          ? "multi_city"
+          : p.tripType === "RoundTrip"
+            ? "round_trip"
+            : "one_way",
         returnDate: p.returnDate || undefined,
-      });
+        directFlightOnly: !!p.directOnly,
+        airlines: p.airlines && p.airlines.length ? p.airlines : undefined,
+      };
+      if (isMultiCity) {
+        payload.legs = (p.legs || []).map(l => ({
+          origin: l.from,
+          destination: l.to,
+          departureDate: l.date,
+        }));
+      }
+      const res = await searchApi.searchFlights(payload);
       const data = res.data as any;
-      const list: Flight[] = data?.flights || [];
+      // Multi-city responds with { legs: [{flights, ...}] } — flatten to a
+      // single list for now so the existing results UI keeps working. The
+      // proper multi-leg picker is a future enhancement.
+      let list: Flight[] = data?.flights || [];
+      if (isMultiCity && Array.isArray(data?.legs)) {
+        list = data.legs.flatMap((legResult: any, i: number) =>
+          (legResult.flights || []).map((f: any) => ({
+            ...f,
+            _legIndex: i,
+            _legFrom: legResult.from,
+            _legTo: legResult.to,
+            _legDate: legResult.date,
+          })),
+        );
+      }
       if (list.length === 0) {
         setSearchError("No flights found for this route. Try different dates or nearby airports.");
       }
@@ -1338,6 +1388,24 @@ function FlightsPageContent() {
 
   // ── Search ────────────────────────────────────────────────
   const handleSearch = async () => {
+    // Multi-city: validate every leg has from/to/date
+    if (searchParams.tripType === "MultiCity") {
+      const legs = searchParams.legs || [];
+      if (legs.length < 2) {
+        toast.error("Multi-city needs at least 2 legs"); return;
+      }
+      for (let i = 0; i < legs.length; i++) {
+        const l = legs[i];
+        if (!l.from || !l.to || !l.date) {
+          toast.error(`Leg ${i + 1}: please fill From, To and Date`); return;
+        }
+        if (l.from === l.to) {
+          toast.error(`Leg ${i + 1}: From and To cannot be the same`); return;
+        }
+      }
+      return runFlightSearch(searchParams);
+    }
+
     if (!searchParams.origin || !searchParams.destination) {
       toast.error("Please select both origin and destination"); return;
     }
@@ -1403,7 +1471,7 @@ function FlightsPageContent() {
     return list;
   }, [flights, filterStops, filterAirline, filterMaxPrice, sortKey]);
 
-  const airlines = useMemo(() => [...new Set(flights.map(f => f.airline))].sort(), [flights]);
+  const airlines = useMemo(() => Array.from(new Set(flights.map(f => f.airline))).sort(), [flights]);
   const minPrice = useMemo(() => flights.reduce((m, f) => Math.min(m, f.fare?.totalFare || f.price), Infinity), [flights]);
   const maxPrice = useMemo(() => flights.reduce((m, f) => Math.max(m, f.fare?.totalFare || f.price), 0), [flights]);
 
@@ -1420,64 +1488,227 @@ function FlightsPageContent() {
       {/* ── Search bar ──────────────────────────────────── */}
       <div className="bg-card border border-border rounded-2xl p-4 sm:p-5 space-y-4">
         {/* Trip type toggle */}
-        <div className="flex gap-2">
-          {(["OneWay", "RoundTrip"] as const).map(t => (
-            <button key={t} onClick={() => setSearchParams(p => ({ ...p, tripType: t }))}
+        <div className="flex flex-wrap gap-2 items-center">
+          {(["OneWay", "RoundTrip", "MultiCity"] as const).map(t => (
+            <button
+              key={t}
+              onClick={() =>
+                setSearchParams(p => ({
+                  ...p,
+                  tripType: t,
+                  // Seed two empty legs the first time multi-city is opened
+                  legs:
+                    t === "MultiCity" && (!p.legs || p.legs.length < 2)
+                      ? [
+                          {
+                            from: p.origin,
+                            fromLabel: p.originLabel,
+                            to: p.destination,
+                            toLabel: p.destinationLabel,
+                            date: p.departureDate || todayISO(),
+                          },
+                          { from: "", fromLabel: "", to: "", toLabel: "", date: "" },
+                        ]
+                      : p.legs,
+                }))
+              }
               className={cn(
                 "px-4 py-1.5 rounded-full text-xs font-semibold border-2 transition-all",
                 searchParams.tripType === t
                   ? "border-primary bg-primary/5 text-primary"
                   : "border-border text-muted-foreground hover:border-primary/40"
-              )}>
-              {t === "OneWay" ? "One Way" : "Round Trip"}
+              )}
+            >
+              {t === "OneWay" ? "One Way" : t === "RoundTrip" ? "Round Trip" : "Multi-City"}
             </button>
           ))}
+
+          {/* Direct-only toggle — applies to all three trip types */}
+          <label className="ml-auto flex items-center gap-2 text-xs font-semibold text-muted-foreground cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={!!searchParams.directOnly}
+              onChange={e =>
+                setSearchParams(p => ({ ...p, directOnly: e.target.checked }))
+              }
+              className="h-4 w-4 accent-primary"
+            />
+            Show only non-stop flights
+          </label>
         </div>
 
-        {/* Airports row */}
-        <div className="flex items-end gap-2">
-          <AirportInput
-            label="From"
-            placeholder="City or airport"
-            value={searchParams.originLabel || searchParams.origin}
-            onChange={v => setSearchParams(p => ({ ...p, origin: v, originLabel: v }))}
-            onSelect={a => setSearchParams(p => ({
-              ...p, origin: a.code, originLabel: `${a.city} (${a.code})`
-            }))}
-          />
-          {/* Swap button */}
-          <button
-            onClick={handleSwap}
-            className="h-12 w-12 rounded-xl border border-border flex items-center justify-center hover:bg-muted hover:border-primary/30 transition-all flex-shrink-0 mb-0"
-          >
-            <ArrowLeftRight className="h-4 w-4" />
-          </button>
-          <AirportInput
-            label="To"
-            placeholder="City or airport"
-            value={searchParams.destinationLabel || searchParams.destination}
-            onChange={v => setSearchParams(p => ({ ...p, destination: v, destinationLabel: v }))}
-            onSelect={a => setSearchParams(p => ({
-              ...p, destination: a.code, destinationLabel: `${a.city} (${a.code})`
-            }))}
-          />
-        </div>
+        {searchParams.tripType !== "MultiCity" ? (
+          /* Single airports row — One-Way / Round-Trip */
+          <div className="flex items-end gap-2">
+            <AirportInput
+              label="From"
+              placeholder="City or airport"
+              value={searchParams.originLabel || searchParams.origin}
+              onChange={v => setSearchParams(p => ({ ...p, origin: v, originLabel: v }))}
+              onSelect={a => setSearchParams(p => ({
+                ...p, origin: a.code, originLabel: `${a.city} (${a.code})`
+              }))}
+            />
+            <button
+              onClick={handleSwap}
+              className="h-12 w-12 rounded-xl border border-border flex items-center justify-center hover:bg-muted hover:border-primary/30 transition-all flex-shrink-0 mb-0"
+            >
+              <ArrowLeftRight className="h-4 w-4" />
+            </button>
+            <AirportInput
+              label="To"
+              placeholder="City or airport"
+              value={searchParams.destinationLabel || searchParams.destination}
+              onChange={v => setSearchParams(p => ({ ...p, destination: v, destinationLabel: v }))}
+              onSelect={a => setSearchParams(p => ({
+                ...p, destination: a.code, destinationLabel: `${a.city} (${a.code})`
+              }))}
+            />
+          </div>
+        ) : (
+          /*
+            Multi-city legs editor.
+            – min 2 legs (otherwise just use one-way)
+            – max 6 legs (TBO and Amadeus practical cap)
+            – each leg is independent: From, To, Date
+            – we auto-link consecutive legs: when leg N's "to" airport
+              changes, leg N+1's "from" gets the same code so the agent
+              doesn't have to retype it for a typical chain itinerary.
+          */
+          <div className="space-y-2.5">
+            {(searchParams.legs || []).map((leg, i) => (
+              <div key={i} className="flex flex-wrap items-end gap-2">
+                <span className="text-[10px] font-bold text-muted-foreground w-12 mb-3.5 uppercase tracking-wide">
+                  Leg {i + 1}
+                </span>
+                <AirportInput
+                  label="From"
+                  placeholder="City or airport"
+                  value={leg.fromLabel || leg.from}
+                  onChange={v =>
+                    setSearchParams(p => {
+                      const next = [...(p.legs || [])];
+                      next[i] = { ...next[i], from: v, fromLabel: v };
+                      return { ...p, legs: next };
+                    })
+                  }
+                  onSelect={a =>
+                    setSearchParams(p => {
+                      const next = [...(p.legs || [])];
+                      next[i] = { ...next[i], from: a.code, fromLabel: `${a.city} (${a.code})` };
+                      return { ...p, legs: next };
+                    })
+                  }
+                />
+                <AirportInput
+                  label="To"
+                  placeholder="City or airport"
+                  value={leg.toLabel || leg.to}
+                  onChange={v =>
+                    setSearchParams(p => {
+                      const next = [...(p.legs || [])];
+                      next[i] = { ...next[i], to: v, toLabel: v };
+                      // Auto-fill next leg's "from" with this leg's "to"
+                      if (next[i + 1] && !next[i + 1].from) {
+                        next[i + 1] = { ...next[i + 1], from: v, fromLabel: v };
+                      }
+                      return { ...p, legs: next };
+                    })
+                  }
+                  onSelect={a =>
+                    setSearchParams(p => {
+                      const next = [...(p.legs || [])];
+                      const code = a.code;
+                      const lbl  = `${a.city} (${a.code})`;
+                      next[i] = { ...next[i], to: code, toLabel: lbl };
+                      if (next[i + 1] && !next[i + 1].from) {
+                        next[i + 1] = { ...next[i + 1], from: code, fromLabel: lbl };
+                      }
+                      return { ...p, legs: next };
+                    })
+                  }
+                />
+                <div className="flex-shrink-0">
+                  {/* Show Date label on every leg row (not just the first)
+                      so it's obvious what the date input is for. */}
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    value={leg.date}
+                    min={i === 0 ? todayISO() : (searchParams.legs?.[i - 1]?.date || todayISO())}
+                    onChange={e =>
+                      setSearchParams(p => {
+                        const next = [...(p.legs || [])];
+                        next[i] = { ...next[i], date: e.target.value };
+                        return { ...p, legs: next };
+                      })
+                    }
+                    className="h-12 px-3.5 rounded-xl border border-border bg-background text-sm font-semibold focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none"
+                  />
+                </div>
+                {(searchParams.legs || []).length > 2 && (
+                  <button
+                    onClick={() =>
+                      setSearchParams(p => ({
+                        ...p,
+                        legs: (p.legs || []).filter((_, idx) => idx !== i),
+                      }))
+                    }
+                    className="h-12 w-12 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all flex-shrink-0"
+                    aria-label={`Remove leg ${i + 1}`}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            ))}
+            {(searchParams.legs || []).length < 6 ? (
+              <button
+                onClick={() =>
+                  setSearchParams(p => ({
+                    ...p,
+                    legs: [
+                      ...(p.legs || []),
+                      { from: "", fromLabel: "", to: "", toLabel: "", date: "" },
+                    ],
+                  }))
+                }
+                className="inline-flex items-center gap-1.5 mt-1 px-3.5 py-2 rounded-xl border-2 border-dashed border-primary/40 text-primary text-xs font-bold hover:border-primary hover:bg-primary/5 transition-all"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add another city
+                <span className="text-[10px] font-normal text-muted-foreground">
+                  (max 6 legs)
+                </span>
+              </button>
+            ) : (
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Maximum 6 legs reached.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Dates + PAX row */}
         <div className="flex flex-wrap gap-3">
-          {/* Departure date */}
-          <div className="flex-1 min-w-[140px]">
-            <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">
-              Departure
-            </label>
-            <input
-              type="date"
-              value={searchParams.departureDate}
-              min={todayISO()}
-              onChange={e => setSearchParams(p => ({ ...p, departureDate: e.target.value }))}
-              className="w-full h-12 px-3.5 rounded-xl border border-border bg-background text-sm font-semibold focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none"
-            />
-          </div>
+          {/* Departure date — hidden in Multi-City mode because each leg
+              already has its own date input above. Showing it here was
+              confusing (which date is the "real" one?). */}
+          {searchParams.tripType !== "MultiCity" && (
+            <div className="flex-1 min-w-[140px]">
+              <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">
+                Departure
+              </label>
+              <input
+                type="date"
+                value={searchParams.departureDate}
+                min={todayISO()}
+                onChange={e => setSearchParams(p => ({ ...p, departureDate: e.target.value }))}
+                className="w-full h-12 px-3.5 rounded-xl border border-border bg-background text-sm font-semibold focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none"
+              />
+            </div>
+          )}
 
           {/* Return date */}
           {searchParams.tripType === "RoundTrip" && (
@@ -1583,7 +1814,30 @@ function FlightsPageContent() {
         </div>
       )}
 
-      {!loading && flights.length > 0 && (
+      {/*
+        Multi-city results render as N columns (one per leg) with an
+        independent flight picker per leg and a combined-total header.
+        Single-leg (One-Way / Round-Trip) keeps the existing list+filter
+        layout below.
+      */}
+      {!loading && flights.length > 0 && searchParams.tripType === "MultiCity" && (
+        <MultiCityResults
+          flights={flights as any}
+          onContinue={(selections) => {
+            // Pre-fill the booking sheet with the first leg; the booking
+            // dialog itself handles the multi-leg payload going to the
+            // backend (via segments[]). For now, surface the chosen flight
+            // count as confirmation; full multi-leg booking dialog is a
+            // follow-up enhancement once supplier APIs accept it.
+            toast.success(
+              `Selected ${selections.length} flight(s) for multi-city itinerary. Multi-leg booking dialog coming next — for now, please book each leg separately.`,
+            );
+            if (selections[0]) setSelectedFlight(selections[0] as any);
+          }}
+        />
+      )}
+
+      {!loading && flights.length > 0 && searchParams.tripType !== "MultiCity" && (
         <div className="flex flex-col lg:flex-row gap-4">
 
           {/* Filter sidebar — sticky on scroll */}

@@ -402,6 +402,19 @@ export interface PlatformSettings {
   hotelMarkupPercent?: number;
   insuranceMarkupPercent?: number;
   b2bAgentDiscount?: number;
+  // Bank accounts shown on the wallet topup page. Admin-managed via
+  // /admin/settings → bankAccounts; exposed to agents via /admin/public-settings.
+  bankAccounts?: Array<{
+    accountName?: string;
+    accountNumber?: string;
+    ifscCode?: string;
+    bankName?: string;
+    upiId?: string;
+    branch?: string;
+    isActive?: boolean;
+  }>;
+  minWalletTopup?: number;
+  maxWalletTopup?: number;
 }
 
 interface PlatformState {

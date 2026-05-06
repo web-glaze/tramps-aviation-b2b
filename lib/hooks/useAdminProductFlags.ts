@@ -48,6 +48,7 @@ export function useAdminProductFlags() {
   const { ps, fetchIfStale } = usePlatformStore();
 
   // Trigger lazy fetch — no-op if already fetched recently
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchIfStale(); }, []);
 
   const commissionList: Product[] = Array.isArray((ps as any).commissionEnabledProducts)

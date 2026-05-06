@@ -62,6 +62,7 @@ export default function B2BHelpPage() {
   const { ps, fetchIfStale } = usePlatformStore();
   useEffect(() => {
     fetchIfStale();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const [form, setForm] = useState({
@@ -378,30 +379,13 @@ export default function B2BHelpPage() {
         </div>
       </div>
 
-      {/* Useful links */}
-      <div className="bg-card border border-border rounded-2xl p-6">
-        <h2 className="font-bold text-base text-foreground mb-4">
-          📚 Useful Resources
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { icon: FileText, label: "Terms & Conditions", href: "/cms/terms" },
-            { icon: FileText, label: "Refund Policy", href: "/cms/refund" },
-            { icon: FileText, label: "Privacy Policy", href: "/cms/privacy" },
-            { icon: Wallet, label: "Add Wallet Funds", href: "/b2b/wallet" },
-          ].map(({ icon: Icon, label, href }) => (
-            <a
-              key={href}
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2.5 p-3 rounded-xl border border-border hover:border-primary/40 hover:bg-muted/50 text-sm text-muted-foreground hover:text-foreground transition-all"
-            >
-              <Icon className="h-4 w-4 text-primary shrink-0" /> {label}
-            </a>
-          ))}
-        </div>
-      </div>
+      {/*
+        Pre-fix: a "Useful Resources" card here listed Terms / Refund /
+        Privacy / Add Wallet Funds links that pointed to broken /cms/* URLs.
+        The same links already live in the global footer (and now point to
+        the real /terms, /refund, /privacy pages). Removed to avoid
+        duplication and broken hrefs.
+      */}
     </div>
   );
 }

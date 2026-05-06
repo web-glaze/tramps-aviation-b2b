@@ -42,6 +42,7 @@ export function MarkupSettings() {
   const { isMarkupEnabled }  = useAdminProductFlags();
   const { user, _hasHydrated } = useAuthStore();
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchIfStale(); }, []);
 
   // Hide the panel from sub-agents — they don't own pricing decisions.
@@ -63,7 +64,7 @@ export function MarkupSettings() {
         <p className="text-xs text-muted-foreground mt-1 flex items-start gap-1.5">
           <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
           Markup is set by Tramps Aviation admin and applied automatically to
-          your search results. You don't need to do anything here — this card
+          your search results. You don&apos;t need to do anything here — this card
           shows the current rates being added to client quotes.
         </p>
       </div>

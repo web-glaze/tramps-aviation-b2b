@@ -51,6 +51,7 @@ import {
 import { useAuthStore } from "@/lib/store";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { ContactQueryForm } from "@/components/contact/ContactQueryForm";
 import { cn } from "@/lib/utils";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -386,7 +387,7 @@ function ReviewCard({ r }: { r: Review }) {
           {r.context}
         </span>
       </div>
-      <p className="text-sm text-foreground leading-relaxed">"{r.body}"</p>
+      <p className="text-sm text-foreground leading-relaxed">&ldquo;{r.body}&rdquo;</p>
       <p className="text-xs text-muted-foreground mt-3 font-medium">
         — {r.meta}
       </p>
@@ -679,7 +680,7 @@ export default function HomePage() {
                 Everything you need to travel
               </h2>
               <p className="mt-3 text-sm sm:text-base text-muted-foreground max-w-xl mx-auto">
-                From booking to boarding — we've got you covered at every step
+                From booking to boarding — we&apos;ve got you covered at every step
                 of your journey.
               </p>
             </div>
@@ -897,8 +898,13 @@ export default function HomePage() {
             CONTACT
         ════════════════════════════════════════════════════════════ */}
         <section className="py-12 sm:py-20">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6">
-            <div className="bg-card border border-border rounded-2xl p-8 sm:p-10 relative overflow-hidden">
+          {/* Pre-fix: outer was max-w-4xl (768px) — too narrow for the
+              left contact-options + right form two-column layout. The
+              form ended up squeezed into ~440px, causing field labels
+              to wrap and "Send Message" to break. Bumped to max-w-6xl
+              (1152px) so the form has ~700px breathing room. */}
+          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+            <div className="bg-card border border-border rounded-2xl p-6 sm:p-10 relative overflow-hidden">
               {/* Soft accent glow */}
               <div
                 aria-hidden
@@ -915,67 +921,81 @@ export default function HomePage() {
                     We are here to help you
                   </span>
                   <h2 className="mt-4 text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
-                    Have questions? Let's talk.
+                    Have questions? Let&apos;s talk.
                   </h2>
                   <p className="mt-3 text-sm sm:text-base text-muted-foreground max-w-lg mx-auto">
-                    Whether you're a traveler or a travel agent — our team is
-                    available 24/7 to assist you with bookings, refunds, or
-                    anything else.
+                    Whether you&apos;re a traveler or a travel agent — drop us a
+                    message and our team gets back within 24 hours.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                  <a
-                    href="https://wa.me/919999999999"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-4 rounded-xl border-2 border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 transition-colors group"
-                  >
-                    <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                      <MessageCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-[10px] font-bold tracking-wide uppercase text-emerald-700 dark:text-emerald-400">
-                        WhatsApp
-                      </p>
-                      <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                        Chat with Us
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Quick replies · Available now
-                      </p>
-                    </div>
-                  </a>
+                {/* Pre-fix: the inner grid was 260px+1fr nested inside an
+                    already-narrow parent, squashing the form. Now the
+                    section uses the full row and the contact options sit
+                    in a roomier 280px column with the form taking the
+                    remaining ~520-680px depending on viewport. */}
+                <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-5 mb-6 max-w-5xl mx-auto">
+                  {/* Quick contact options */}
+                  <div className="space-y-3">
+                    <a
+                      href="https://wa.me/919999999999"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-4 rounded-xl border-2 border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 transition-colors"
+                    >
+                      <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                        <MessageCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                      </div>
+                      <div className="text-left min-w-0 flex-1">
+                        <p className="text-[10px] font-bold tracking-wider uppercase text-emerald-700 dark:text-emerald-400">
+                          WhatsApp
+                        </p>
+                        <p className="text-sm font-bold text-foreground truncate">
+                          Chat with Us
+                        </p>
+                      </div>
+                    </a>
 
-                  <a
-                    href="mailto:support@trampsaviation.com"
-                    className="flex items-center gap-3 p-4 rounded-xl border-2 border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors group"
-                  >
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Mail className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-[10px] font-bold tracking-wide uppercase text-primary">
-                        Email / Form
-                      </p>
-                      <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                        Contact Us
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        We reply within 24 hours
-                      </p>
-                    </div>
-                  </a>
-                </div>
+                    <a
+                      href="mailto:support@trampsaviation.com"
+                      className="flex items-center gap-3 p-4 rounded-xl border-2 border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors"
+                    >
+                      <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Mail className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="text-left min-w-0 flex-1">
+                        <p className="text-[10px] font-bold tracking-wider uppercase text-primary">
+                          Email
+                        </p>
+                        <p className="text-sm font-bold text-foreground truncate">
+                          support@…
+                        </p>
+                        <p className="text-[10px] text-muted-foreground truncate">
+                          trampsaviation.com
+                        </p>
+                      </div>
+                    </a>
 
-                <div className="flex justify-center pt-6 border-t border-border">
-                  <Link
-                    href="/flights"
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity"
-                  >
-                    <Search className="h-4 w-4" />
-                    Search Flights Now
-                  </Link>
+                    <Link
+                      href="/flights"
+                      className="flex items-center gap-3 p-4 rounded-xl border border-border hover:bg-muted transition-colors"
+                    >
+                      <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
+                        <Search className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div className="text-left min-w-0 flex-1">
+                        <p className="text-[10px] font-bold tracking-wider uppercase text-muted-foreground">
+                          Or just
+                        </p>
+                        <p className="text-sm font-bold text-foreground truncate">
+                          Search Flights →
+                        </p>
+                      </div>
+                    </Link>
+                  </div>
+
+                  {/* Inline submit-query form */}
+                  <ContactQueryForm />
                 </div>
               </div>
             </div>

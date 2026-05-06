@@ -313,7 +313,7 @@ export default function InsurancePage() {
         <div>
           <h1 className="text-2xl font-bold font-display">Travel Insurance</h1>
           <p className="text-sm text-muted-foreground">
-            Protect your clients' journeys — domestic & international plans
+            Protect your clients&apos; journeys — domestic & international plans
           </p>
         </div>
       </div>

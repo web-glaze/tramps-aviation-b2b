@@ -48,12 +48,20 @@ export const ROUTES = {
 } as const;
 
 // B2B Sidebar Navigation — primary items (shown directly in top bar)
+//
+// Pre-fix: this was labelled "Wallet" — but agents wanted a single
+// "Account" entry that bundles balance, top-ups, invoices and bank-account
+// details (similar to the "Account" pattern on TBO / Riya). The URL stays
+// /b2b/wallet for backward-compat (deep links, bookmarks, the orange round
+// wallet icon in the header), but the visible label is now "Account" and
+// the page itself shows tabs for Make Payment, Statement, Invoices and
+// Bank Accounts.
 export const B2B_SIDEBAR_NAV: NavItem[] = [
   { label: "Dashboard", href: ROUTES.B2B_DASHBOARD, icon: LayoutDashboard },
   { label: "Flights", href: ROUTES.B2B_FLIGHTS, icon: Plane },
   { label: "Hotels", href: ROUTES.B2B_HOTELS, icon: Hotel },
   { label: "Insurance", href: ROUTES.B2B_INSURANCE, icon: Shield },
-  { label: "Wallet", href: ROUTES.B2B_WALLET, icon: Wallet },
+  { label: "Account", href: ROUTES.B2B_WALLET, icon: Wallet },
   { label: "Series Fare", href: "/b2b/series-fare", icon: Tag },
 ];
 

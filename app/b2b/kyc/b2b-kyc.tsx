@@ -221,6 +221,7 @@ export default function B2BKycPage() {
     if (hasFetched.current) return;
     hasFetched.current = true;
     fetchStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [_hasHydrated, isAuthenticated]);
 
   // ── Fetch KYC status ────────────────────────────────────────────
@@ -301,6 +302,7 @@ export default function B2BKycPage() {
     } finally {
       setPageLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   // ── Submit text details ─────────────────────────────────────────
@@ -1446,7 +1448,7 @@ export default function B2BKycPage() {
                     margin: "0 0 0.875rem",
                   }}
                 >
-                  Click submit to send your KYC for admin review. You'll be
+                  Click submit to send your KYC for admin review. You&apos;ll be
                   notified by email within 24–48 hours.
                 </p>
                 <button

@@ -19,10 +19,10 @@ export function getErrorMessage(err: unknown, fallback = "Something went wrong. 
   }
 
   if (typeof err === "object") {
-    const o = err as Record<string, unknown>;
+    const o = err as any;
     const msg =
-      o?.response?.["data"]?.["message"] ||
-      o?.response?.["data"]?.["error"] ||
+      o?.response?.data?.message ||
+      o?.response?.data?.error ||
       o?.message ||
       o?.error;
     if (msg) return String(msg);

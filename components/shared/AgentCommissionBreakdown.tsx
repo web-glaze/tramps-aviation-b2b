@@ -70,6 +70,7 @@ export function AgentCommissionBreakdown({
   const { ps, fetchIfStale } = usePlatformStore();
   useEffect(() => {
     fetchIfStale();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const gstRate =
     typeof ps.gstPercent === "number" && ps.gstPercent > 0 ? ps.gstPercent : 18; // safe fallback if settings not loaded yet

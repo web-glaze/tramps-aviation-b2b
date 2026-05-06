@@ -35,10 +35,60 @@ const fmtTime = (v: string) => {
   return v;  // already "HH:MM"
 };
 
+/**
+ * Pre-fix: tickets showed "—" in the duration slot whenever the supplier
+ * didn't return a `duration` field (TBO sometimes does, custom series
+ * fares never do). Now we compute it from departureTime / arrivalTime
+ * whenever both are present, falling back to the supplier value if not.
+ *
+ * Handles both ISO timestamps ("2026-05-10T09:30:00Z") and plain "HH:MM"
+ * strings. For plain strings we assume same-calendar-day; if arrival
+ * appears to be before departure we add 24h (red-eye flights).
+ */
+function computeDuration(
+  dep?: string,
+  arr?: string,
+  travelDate?: string,
+  fallback?: string,
+): string {
+  if (!dep || !arr) return fallback || "—";
+
+  const toDate = (v: string): Date | null => {
+    if (v.includes("T")) {
+      const d = new Date(v);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    // "HH:MM" → anchor to travelDate (or today as a last resort)
+    const m = v.match(/^(\d{1,2}):(\d{2})/);
+    if (!m) return null;
+    const base = travelDate ? new Date(travelDate) : new Date();
+    if (isNaN(base.getTime())) return null;
+    base.setHours(+m[1], +m[2], 0, 0);
+    return base;
+  };
+
+  const d1 = toDate(dep);
+  const d2 = toDate(arr);
+  if (!d1 || !d2) return fallback || "—";
+
+  let diffMin = Math.round((d2.getTime() - d1.getTime()) / 60000);
+  if (diffMin < 0) diffMin += 24 * 60; // red-eye / overnight
+  if (diffMin <= 0 || diffMin > 24 * 60) return fallback || "—";
+
+  const h = Math.floor(diffMin / 60);
+  const m = diffMin % 60;
+  if (h && m) return `${h}h ${m}m`;
+  if (h)      return `${h}h`;
+  return `${m}m`;
+}
+
 function normalise(raw: any) {
   if (!raw) return null;
   const seg = raw.segments?.[0] || {};
   const pax = raw.passengers || [];
+  const rawDep = seg.departureTime || raw.departure || "";
+  const rawArr = seg.arrivalTime   || raw.arrival   || "";
+  const rawTravelDate = seg.travelDate || raw.travelDate || raw.date || rawDep;
   return {
     id:               raw.bookingRef || raw.id || "—",
     bookingRef:       raw.bookingRef || raw.id || "—",
@@ -55,13 +105,17 @@ function normalise(raw: any) {
     fromCity:         seg.originCity || raw.fromCity || seg.origin || "—",
     to:               seg.destination || raw.to || "—",
     toCity:           seg.destinationCity || raw.toCity || seg.destination || "—",
-    departure:        fmtTime(seg.departureTime || raw.departure || ""),
-    arrival:          fmtTime(seg.arrivalTime   || raw.arrival   || ""),
+    departure:        fmtTime(rawDep),
+    arrival:          fmtTime(rawArr),
     // travelDate often missing — fall back to extracting the date portion
     // from departureTime ISO so the "Travel Date" field never reads "—"
     // for confirmed series-fare bookings.
-    date:             fmtDate(seg.travelDate || raw.travelDate || raw.date || seg.departureTime || raw.departure),
-    duration:         seg.duration || raw.duration || "—",
+    date:             fmtDate(rawTravelDate),
+    // Pre-fix: showed "—" whenever the supplier omitted `duration`. Now we
+    // compute it from departure/arrival times whenever both are present.
+    duration:         computeDuration(
+      rawDep, rawArr, rawTravelDate, seg.duration || raw.duration,
+    ),
     stops:            raw.stops === 0 ? "Non-stop" : raw.stops ? `${raw.stops} stop` : "Non-stop",
     pnr:              raw.pnr || "—",
     class:            seg.cabinClass || raw.class || "Economy",
@@ -83,30 +137,62 @@ function normalise(raw: any) {
   };
 }
 
-function PrintHeader({ logoUrl, companyName, ps }: { logoUrl: string; companyName: string; ps: any }) {
-  const name  = companyName || ps?.platformName || "";
-  const addr  = [ps?.addressLine1, ps?.city, ps?.state, ps?.pincode].filter(Boolean).join(", ");
-  const phone = ps?.supportPhoneDisplay || ps?.supportPhone || "";
-  const email = ps?.supportEmail || "";
-  const gstNo = ps?.gstNumber || "";
+/**
+ * Print-only letterhead. Pre-fix this rendered the PLATFORM's contact info
+ * (Tramps Aviation India Pvt. Ltd.) but the printed ticket actually goes
+ * to the passenger via the AGENT — they expect to see the agent's agency
+ * name, address, phone and email so the passenger can call back. Now the
+ * letterhead defaults to the agent's own profile, with the platform line
+ * relegated to the small "powered by" footnote on the right.
+ */
+function PrintHeader({
+  logoUrl, companyName, agent, ps,
+}: { logoUrl: string; companyName: string; agent: any; ps: any }) {
+  // Prefer agent profile fields; fall back to platform settings if the
+  // agent hasn't filled their address/phone yet.
+  const name =
+    companyName ||
+    agent?.agencyName ||
+    agent?.contactPerson ||
+    ps?.platformName ||
+    "";
+  const addr =
+    [agent?.address, agent?.city, agent?.state, agent?.pincode]
+      .filter(Boolean)
+      .join(", ") ||
+    [ps?.addressLine1, ps?.city, ps?.state, ps?.pincode]
+      .filter(Boolean)
+      .join(", ");
+  const phone = agent?.phone || ps?.supportPhoneDisplay || ps?.supportPhone || "";
+  const email = agent?.email || ps?.supportEmail || "";
+  const gstNo = agent?.gstNumber || ps?.gstNumber || "";
+  const agentId = agent?.agentId || "";
   if (!logoUrl && !name) return null;
   return (
     <div className="hidden print:block mb-6 pb-5 border-b-2 border-gray-300">
       <div className="flex items-start gap-4">
-        {logoUrl && <img src={logoUrl} alt="Logo" className="h-14 w-auto object-contain rounded" />}
+        {logoUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logoUrl} alt="Logo" className="h-14 w-auto object-contain rounded" />
+        )}
         <div className="flex-1">
-          {name  && <p className="text-xl font-black text-gray-900">{name}</p>}
-          {addr  && <p className="text-xs text-gray-600 mt-0.5">{addr}</p>}
-          <div className="flex flex-wrap gap-4 mt-1">
+          {name && <p className="text-xl font-black text-gray-900">{name}</p>}
+          {addr && <p className="text-xs text-gray-600 mt-0.5">{addr}</p>}
+          <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1">
             {phone && <p className="text-xs text-gray-600">📞 {phone}</p>}
             {email && <p className="text-xs text-gray-600">✉ {email}</p>}
             {gstNo && <p className="text-xs text-gray-600">GST: {gstNo}</p>}
+            {agentId && (
+              <p className="text-xs text-gray-600">Agent ID: {agentId}</p>
+            )}
           </div>
         </div>
         <div className="text-right text-xs text-gray-500">
           <p className="font-semibold text-gray-800">E-TICKET / ITINERARY</p>
           <p>Authorized Travel Agent</p>
-          <p>Tramps Aviation India Pvt. Ltd.</p>
+          <p className="text-[10px] mt-0.5 text-gray-400">
+            Powered by {ps?.platformName || "Tramps Aviation"}
+          </p>
         </div>
       </div>
     </div>
@@ -117,6 +203,7 @@ export default function B2BBookingDetailPage() {
   const params = useParams();
   const { ps, fetchIfStale } = usePlatformStore();
   const [booking,     setBooking]     = useState<any>(null);
+  const [agent,       setAgent]       = useState<any>(null);
   const [loading,     setLoading]     = useState(true);
   const [cancelling,  setCancelling]  = useState(false);
   const [sending,     setSending]     = useState(false);
@@ -127,6 +214,17 @@ export default function B2BBookingDetailPage() {
 
   useEffect(() => {
     fetchIfStale();
+    // Pre-fix: ticket print used PLATFORM info as the issuer. Now we load
+    // the agent's own profile so the print can show the agent's agency
+    // name, address, phone, email and agent-id as the contact-back point
+    // for the passenger.
+    agentApi.getProfile()
+      .then((res) => {
+        const a: any = unwrap(res);
+        setAgent(a?.agent || a);
+      })
+      .catch(() => setAgent(null));
+
     const id = params?.bookingId as string;
     if (!id) { setLoading(false); return; }
 
@@ -145,6 +243,7 @@ export default function B2BBookingDetailPage() {
         return;
       })
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params]);
 
   const handleSendToPassenger = async () => {
@@ -197,10 +296,6 @@ export default function B2BBookingDetailPage() {
 
   return (
     <div className="space-y-5 max-w-4xl mx-auto">
-
-      {/* Print-only company header */}
-      <PrintHeader logoUrl={printLogoUrl} companyName={printCompanyName} ps={ps} />
-
       {/* Page header */}
       <div className="flex items-center gap-3 print:hidden">
         <Link href="/b2b/bookings">
@@ -239,15 +334,39 @@ export default function B2BBookingDetailPage() {
         )}
       </div>
 
+      {/*
+        Pre-fix: clicking Print rendered the entire page (sidebar, footer,
+        social links, etc) on 2-3 sheets. Now everything print-related is
+        wrapped inside `.print-area`; the global @media print CSS hides
+        every other element on the page so only this card prints.
+      */}
+      <div className="print-area">
+
+      {/* Print-only company header (uses agent profile, not platform) */}
+      <PrintHeader logoUrl={printLogoUrl} companyName={printCompanyName} agent={agent} ps={ps} />
+
       {/* Main ticket card */}
       <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">
-        <div className="bg-gradient-to-r from-blue-700 to-indigo-700 px-6 py-4 flex items-center justify-between">
+        {/*
+          Pre-fix gradient: from-blue-700 to-indigo-700 — generic.
+          New gradient: brand blue (heavy) → brand orange accent on the
+          right edge. CSS variables --brand-blue and --brand-orange are
+          declared in globals.css so this restays in sync if the brand
+          colours change.
+        */}
+        <div
+          className="px-6 py-4 flex items-center justify-between"
+          style={{
+            background:
+              "linear-gradient(90deg, hsl(var(--brand-blue-dark)) 0%, hsl(var(--brand-blue)) 60%, hsl(var(--brand-orange)) 100%)",
+          }}
+        >
           <div className="flex items-center gap-2">
             <Plane className="h-5 w-5 text-white" />
             <span className="font-bold text-white">{booking.type} · {booking.airline}</span>
-            <span className="text-blue-200 text-sm font-mono">{booking.flightNo}</span>
+            <span className="text-white/80 text-sm font-mono">{booking.flightNo}</span>
           </div>
-          <span className="text-xs bg-white/20 text-white font-semibold px-3 py-1 rounded-full uppercase">
+          <span className="text-xs bg-white/25 text-white font-semibold px-3 py-1 rounded-full uppercase">
             {booking.status}
           </span>
         </div>
@@ -349,27 +468,40 @@ export default function B2BBookingDetailPage() {
             </div>
           </div>
 
-          {/* Issuer block — only visible in print */}
-          {ps?.addressLine1 && (
-            <div className="hidden print:block border-t pt-4 mt-4">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Issued By</p>
-              <div className="text-xs text-gray-600 space-y-0.5">
-                <p className="font-semibold text-gray-800">{ps.platformName}</p>
-                {ps.addressLine1 && <p>{ps.addressLine1}{ps.addressLine2 ? `, ${ps.addressLine2}` : ""}</p>}
-                {(ps.city || ps.state) && <p>{[ps.city, ps.state, ps.pincode].filter(Boolean).join(", ")}</p>}
-                {(ps as any).gstNumber && <p>GST No: {(ps as any).gstNumber}</p>}
-                {(ps as any).panNumber && <p>PAN: {(ps as any).panNumber}</p>}
-                {ps.supportEmail && <p>Email: {ps.supportEmail}</p>}
-                {ps.supportPhoneDisplay && <p>Phone: {ps.supportPhoneDisplay}</p>}
-              </div>
-              <p className="text-[10px] text-gray-400 mt-3">
-                This is a computer-generated itinerary and does not require a signature.
-                Valid subject to airline/hotel terms & conditions.
+          {/* Issuer block — only visible in print. Pre-fix this showed
+              PLATFORM details; now shows AGENT details so the passenger
+              knows who to call back about their booking. */}
+          <div className="hidden print:block border-t pt-4 mt-4">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Issued By</p>
+            <div className="text-xs text-gray-600 space-y-0.5">
+              <p className="font-semibold text-gray-800">
+                {agent?.agencyName || agent?.contactPerson || ps?.platformName || ""}
               </p>
+              {agent?.address && <p>{agent.address}</p>}
+              {(agent?.city || agent?.state) && (
+                <p>{[agent?.city, agent?.state, agent?.pincode].filter(Boolean).join(", ")}</p>
+              )}
+              {agent?.gstNumber && <p>GST No: {agent.gstNumber}</p>}
+              {agent?.panNumber && <p>PAN: {agent.panNumber}</p>}
+              {agent?.email && <p>Email: {agent.email}</p>}
+              {agent?.phone && <p>Phone: {agent.phone}</p>}
+              {agent?.agentId && <p>Agent ID: {agent.agentId}</p>}
+              {!agent && (
+                <p className="text-gray-400 italic">
+                  (Update your agency profile in Settings to show your contact details here.)
+                </p>
+              )}
             </div>
-          )}
+            <p className="text-[10px] text-gray-400 mt-3">
+              This is a computer-generated itinerary and does not require a signature.
+              Valid subject to airline / hotel terms &amp; conditions.
+              {ps?.platformName ? ` Powered by ${ps.platformName}.` : ""}
+            </p>
+          </div>
         </div>
       </div>
+
+      </div>{/* /.print-area */}
 
       {/* Print Setup Modal */}
       {showPrintSetup && (
@@ -405,6 +537,7 @@ export default function B2BBookingDetailPage() {
               <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
               {printLogoUrl ? (
                 <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-xl border border-border">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={printLogoUrl} alt="Preview" className="h-10 w-auto object-contain rounded" />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium">Logo uploaded</p>

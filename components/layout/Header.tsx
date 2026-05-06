@@ -60,7 +60,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/b2b/insurance":  "Travel Insurance",
   "/b2b/series-fare":"Series Fare",
   "/b2b/bookings":   "My Bookings",
-  "/b2b/wallet":     "Wallet",
+  "/b2b/wallet":     "Account",
   "/b2b/commission": "Commission",
   "/b2b/markup":     "Markup Tool",
   "/b2b/subagents":  "Sub-Agent Management",
@@ -209,6 +209,7 @@ function FullHeader() {
   const moreMenuRef = useRef<HTMLDivElement>(null);
 
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchIfStale(); }, []);
 
   // Wallet balance — fetched once on mount
@@ -369,7 +370,7 @@ function FullHeader() {
             <Link
               href="/b2b/wallet"
               className="relative h-9 w-9 rounded-xl border-2 border-[hsl(var(--brand-blue-light))] bg-[hsl(var(--brand-blue-tint))] flex items-center justify-center text-[hsl(var(--brand-blue))] hover:bg-[hsl(var(--brand-blue))] hover:text-white hover:border-[hsl(var(--brand-blue))] transition-all group"
-              title={liveBalance !== null ? `Wallet: ₹${liveBalance.toLocaleString("en-IN")}` : "Wallet"}
+              title={liveBalance !== null ? `Account balance: ₹${liveBalance.toLocaleString("en-IN")}` : "Account"}
             >
               <Wallet className="h-4 w-4" />
               {liveBalance !== null && liveBalance > 0 && (
@@ -440,7 +441,7 @@ function FullHeader() {
                         className="flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-muted transition-colors"
                       >
                         <Wallet className="h-4 w-4 text-muted-foreground" />
-                        My Wallet
+                        My Account
                       </Link>
                       <Link
                         href="/b2b/bookings"
