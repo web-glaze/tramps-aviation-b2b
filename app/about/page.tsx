@@ -17,7 +17,7 @@ const FALLBACK_HTML = `
 <p>Tramps Aviation India Pvt. Ltd. is IATA-accredited and operates under RBI guidelines for wallet and payment services. All payments are processed through PCI-DSS certified gateways.</p>
 
 <h2>Reach us</h2>
-<p>For partnerships, support, or general enquiries — visit our <a href="/b2b/help">help centre</a>.</p>
+<p>For partnerships, support, or general enquiries — visit our <a href="/help">help centre</a>.</p>
 `;
 
 export default function AboutPage() {

@@ -180,14 +180,21 @@ export function MultiCityResults({ flights, onContinue }: Props) {
         </button>
       </div>
 
-      {/* ── Per-leg result columns ──────────────────────────────── */}
+      {/* ── Per-leg result columns ──────────────────────────────────
+          Responsive grid that auto-adapts to the number of legs:
+            1 leg  → full width (no point splitting a single column)
+            2 legs → 50/50 from `lg` upward
+            3 legs → 33/33/33 from `lg` upward
+            4-6 legs → max 3 per row; extras wrap to a new row
+          Mobile stays single-column throughout so each leg's flight
+          list keeps a sensible touch-friendly width. */}
       <div
         className={
-          legs.length === 2
-            ? "grid grid-cols-1 lg:grid-cols-2 gap-4"
-            : legs.length === 3
-              ? "grid grid-cols-1 lg:grid-cols-3 gap-4"
-              : "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4"
+          legs.length === 1
+            ? "grid grid-cols-1 gap-4"
+            : legs.length === 2
+              ? "grid grid-cols-1 lg:grid-cols-2 gap-4"
+              : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
         }
       >
         {legs.map((leg) => (

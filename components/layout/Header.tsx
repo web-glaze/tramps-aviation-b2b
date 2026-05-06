@@ -10,15 +10,15 @@
  *   ┌─ COMPACT MODE ─────────────────────────────────────────────────────┐
  *   │  Used on:                                                          │
  *   │    • home (/) and public marketing pages                           │
- *   │    • auth pages (/b2b/login, /b2b/register, /b2b/forgot-password,  │
- *   │      /b2b/reset-password, /b2b/kyc)                                │
+ *   │    • auth pages (/login, /register, /forgot-password,  │
+ *   │      /reset-password, /kyc)                                │
  *   │    • public product pages (/flights, /hotels, /insurance,          │
  *   │      /series-fare) when the visitor is NOT logged in               │
  *   │  Layout: sticky logo bar with theme toggle + a contextual CTA.     │
  *   └────────────────────────────────────────────────────────────────────┘
  *
  *   ┌─ FULL MODE ────────────────────────────────────────────────────────┐
- *   │  Used on every authenticated /b2b/* portal page.                   │
+ *   │  Used on every authenticated portal page.                   │
  *   │  Layout: fixed top navbar with menu, wallet, notifications, user.  │
  *   │  (b2b/layout.tsx already adds the matching pt-[…] for the fixed    │
  *   │  header — don't change that.)                                       │
@@ -42,37 +42,53 @@ import { B2BLogo } from "@/components/ui/B2BLogo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/utils";
 
-// Pathnames that should always use the compact header (auth/public pages).
-// Anything under /b2b/* not in this list is treated as an authenticated
-// portal page and gets the full navbar.
-const COMPACT_B2B_PREFIXES = [
-  "/b2b/login",
-  "/b2b/register",
-  "/b2b/forgot-password",
-  "/b2b/reset-password",
-  "/b2b/kyc",
+// Pathnames that should use the compact header.
+//
+//  - Auth flow pages: /login, /register, /forgot-password,
+//    /reset-password, /kyc
+//  - Public CMS / marketing surfaces: /, /about, /faq, /privacy,
+//    /terms, /refund — these render PublicPageChrome inside the page,
+//    so the top header stays minimal.
+//
+// Every other path is an authenticated agent page (dashboard,
+// flights, hotels, bookings, wallet, …) and gets the full navbar.
+const COMPACT_PREFIXES = [
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/kyc",
 ];
 
+const COMPACT_EXACT_PATHS = new Set<string>([
+  "/",
+  "/about",
+  "/faq",
+  "/privacy",
+  "/terms",
+  "/refund",
+]);
+
 const PAGE_TITLES: Record<string, string> = {
-  "/b2b/dashboard":  "Dashboard",
-  "/b2b/flights":    "Book Flights",
-  "/b2b/hotels":     "Book Hotels",
-  "/b2b/insurance":  "Travel Insurance",
-  "/b2b/series-fare":"Series Fare",
-  "/b2b/bookings":   "My Bookings",
-  "/b2b/wallet":     "Account",
-  "/b2b/commission": "Commission",
-  "/b2b/markup":     "Markup Tool",
-  "/b2b/subagents":  "Sub-Agent Management",
-  "/b2b/reports":    "Reports",
-  "/b2b/profile":    "My Profile",
-  "/b2b/help":       "Help & Support",
+  "/dashboard":  "Dashboard",
+  "/flights":    "Book Flights",
+  "/hotels":     "Book Hotels",
+  "/insurance":  "Travel Insurance",
+  "/series-fare":"Series Fare",
+  "/bookings":   "My Bookings",
+  "/wallet":     "Account",
+  "/commission": "Commission",
+  "/markup":     "Markup Tool",
+  "/subagents":  "Sub-Agent Management",
+  "/reports":    "Reports",
+  "/profile":    "My Profile",
+  "/help":       "Help & Support",
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MODE PICKER
 //
-// Anti-flicker rule:  on /b2b/* portal pages we *always* render the full
+// Anti-flicker rule:  on authenticated portal pages we *always* render the full
 // navbar shell (even before hydration), because that's the only mode that
 // page can be in. On every other page we render the compact header. The
 // auth-state-dependent CTAs inside the compact header gracefully hide
@@ -82,12 +98,12 @@ const PAGE_TITLES: Record<string, string> = {
 export function Header() {
   const pathname = usePathname() || "/";
 
-  const isCompactB2BRoute = COMPACT_B2B_PREFIXES.some((p) => pathname.startsWith(p));
-  const isOnB2BPortal     = pathname.startsWith("/b2b/") && !isCompactB2BRoute;
+  const isCompactPrefix = COMPACT_PREFIXES.some((p) => pathname.startsWith(p));
+  const isCompact = isCompactPrefix || COMPACT_EXACT_PATHS.has(pathname);
 
   // Pathname alone determines layout — no auth-state read here, so the first
   // server / pre-hydration render matches the post-hydration render exactly.
-  return isOnB2BPortal ? <FullHeader /> : <CompactHeader pathname={pathname} />;
+  return isCompact ? <CompactHeader pathname={pathname} /> : <FullHeader />;
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -99,8 +115,8 @@ function CompactHeader({ pathname }: { pathname: string }) {
 
   // CTA selection logic, in priority order:
   //   1. If the visitor is signed in → "Go to Dashboard" (orange brand accent)
-  //   2. On /b2b/login → "Register Free"
-  //   3. On /b2b/register → "Sign In"
+  //   2. On /login → "Register Free"
+  //   3. On /register → "Sign In"
   //   4. Anywhere else (home, /flights, etc.) → both buttons
   //
   // Anti-flicker: until the persisted store hydrates we *don't know* yet
@@ -108,8 +124,8 @@ function CompactHeader({ pathname }: { pathname: string }) {
   // that brief window so we don't flash the wrong button. The slot itself
   // is reserved with a min-width so the layout doesn't jump.
   const showAuthedCTA    = _hasHydrated && isAuthenticated;
-  const showOnlyRegister = pathname.startsWith("/b2b/login");
-  const showOnlyLogin    = pathname.startsWith("/b2b/register");
+  const showOnlyRegister = pathname.startsWith("/login");
+  const showOnlyLogin    = pathname.startsWith("/register");
 
   return (
     <header className="w-full bg-card/85 backdrop-blur-sm sticky top-0 z-30 shadow-[0_2px_8px_rgba(32,154,205,0.08)]">
@@ -133,7 +149,7 @@ function CompactHeader({ pathname }: { pathname: string }) {
 
           {showAuthedCTA && (
             <Link
-              href="/b2b/dashboard"
+              href="/dashboard"
               className="px-4 py-1.5 rounded-lg bg-[hsl(var(--brand-orange))] text-white font-semibold text-xs hover:opacity-90 transition-opacity"
             >
               Go to Dashboard
@@ -144,7 +160,7 @@ function CompactHeader({ pathname }: { pathname: string }) {
             <>
               <span className="text-muted-foreground text-sm hidden sm:block">New agency?</span>
               <Link
-                href="/b2b/register"
+                href="/register"
                 className="px-4 py-1.5 rounded-lg bg-[hsl(var(--brand-orange))] text-white font-semibold text-xs hover:opacity-90 transition-opacity"
               >
                 Register Free
@@ -156,7 +172,7 @@ function CompactHeader({ pathname }: { pathname: string }) {
             <>
               <span className="text-muted-foreground text-sm hidden sm:block">Already registered?</span>
               <Link
-                href="/b2b/login"
+                href="/login"
                 className="px-4 py-1.5 rounded-lg border border-border text-foreground font-semibold text-xs hover:bg-muted transition-colors"
               >
                 Sign In
@@ -167,13 +183,13 @@ function CompactHeader({ pathname }: { pathname: string }) {
           {_hasHydrated && !showAuthedCTA && !showOnlyRegister && !showOnlyLogin && (
             <>
               <Link
-                href="/b2b/login"
+                href="/login"
                 className="hidden sm:inline-flex px-3 py-1.5 rounded-lg border border-border text-foreground font-semibold text-xs hover:bg-muted transition-colors"
               >
                 Sign In
               </Link>
               <Link
-                href="/b2b/register"
+                href="/register"
                 className="px-4 py-1.5 rounded-lg bg-[hsl(var(--brand-orange))] text-white font-semibold text-xs hover:opacity-90 transition-opacity"
               >
                 Register Free
@@ -245,7 +261,7 @@ function FullHeader() {
 
   const handleLogout = () => {
     if (clearAuth) clearAuth();
-    router.push("/b2b/login");
+    router.push("/login");
   };
 
   const userName    = user?.name || (user as any)?.agencyName || "Agent";
@@ -271,7 +287,7 @@ function FullHeader() {
           </button>
 
           {/* Brand */}
-          <Link href="/b2b/dashboard" className="flex items-center gap-2.5 flex-shrink-0 group">
+          <Link href="/dashboard" className="flex items-center gap-2.5 flex-shrink-0 group">
             <div className="h-9 w-9 rounded-xl overflow-hidden border border-border shadow-sm bg-white">
               <AppLogo size="h-9 w-9" />
             </div>
@@ -368,7 +384,7 @@ function FullHeader() {
 
             {/* Wallet shortcut with live balance check badge */}
             <Link
-              href="/b2b/wallet"
+              href="/wallet"
               className="relative h-9 w-9 rounded-xl border-2 border-[hsl(var(--brand-blue-light))] bg-[hsl(var(--brand-blue-tint))] flex items-center justify-center text-[hsl(var(--brand-blue))] hover:bg-[hsl(var(--brand-blue))] hover:text-white hover:border-[hsl(var(--brand-blue))] transition-all group"
               title={liveBalance !== null ? `Account balance: ₹${liveBalance.toLocaleString("en-IN")}` : "Account"}
             >
@@ -436,7 +452,7 @@ function FullHeader() {
                         );
                       })}
                       <Link
-                        href="/b2b/wallet"
+                        href="/wallet"
                         onClick={() => setUserMenuOpen(false)}
                         className="flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-muted transition-colors"
                       >
@@ -444,7 +460,7 @@ function FullHeader() {
                         My Account
                       </Link>
                       <Link
-                        href="/b2b/bookings"
+                        href="/bookings"
                         onClick={() => setUserMenuOpen(false)}
                         className="flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-muted transition-colors"
                       >
@@ -528,7 +544,7 @@ function FullHeader() {
 
             {liveBalance !== null && (
               <Link
-                href="/b2b/wallet"
+                href="/wallet"
                 className="mx-3 mt-3 mb-2 flex items-center gap-3 p-3 rounded-xl border-2 border-[hsl(var(--brand-blue-light))] bg-[hsl(var(--brand-blue-tint))] hover:bg-[hsl(var(--brand-blue-light))]/40 transition-colors relative overflow-hidden"
               >
                 {/* Brand-orange corner accent */}

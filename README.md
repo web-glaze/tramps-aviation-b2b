@@ -117,7 +117,7 @@ tramps-aviation-b2b/
 * **`apiClient`** — base URL from `NEXT_PUBLIC_API_URL`. Request interceptor
   reads `auth_token` from `localStorage` and adds `Authorization: Bearer …`.
   Response interceptor maps 401 to a silent token refresh, then redirects
-  to `/b2b/login` only on actual portal pages.
+  to `/login` only on actual portal pages.
 * **`publicApiClient`** — same base URL, no auth header. Used for genuinely
   public reads (search, autocomplete) so anonymous users don't trip the
   auth pipeline.
@@ -156,10 +156,10 @@ Concurrency safety mirrored across all booking modals:
 
 * **Public pages**: `/`, `/flights`, `/hotels`, `/insurance`, `/series-fare`,
   `/faq`, `/privacy`, `/terms`, `/refund`, `/about` — no token required.
-* **B2B auth pages**: `/b2b/login`, `/b2b/register`, `/b2b/kyc`,
-  `/b2b/forgot-password`, `/b2b/reset-password` — no token required.
-* **Everything else under `/b2b/*`** — token required. Without one, redirect
-  to `/b2b/login?redirect=<original-path>`.
+* **B2B auth pages**: `/login`, `/register`, `/kyc`,
+  `/forgot-password`, `/reset-password` — no token required.
+* **Everything else under `/*`** — token required. Without one, redirect
+  to `/login?redirect=<original-path>`.
 
 ---
 

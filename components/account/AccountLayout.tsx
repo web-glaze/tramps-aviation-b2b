@@ -24,7 +24,7 @@
  * section navigation always visible and gives every sub-page a
  * consistent main-content width (max-w-4xl).
  *
- * Usage — wrap any /b2b/wallet or /b2b/account/* page:
+ * Usage — wrap any /wallet or /account/* page:
  *   <AccountLayout>
  *     ...page contents...
  *   </AccountLayout>
@@ -49,26 +49,26 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   {
-    href: "/b2b/wallet",
+    href: "/wallet",
     label: "Statement",
     description: "Balance & transaction history",
     icon: FileText,
     exact: true,
   },
   {
-    href: "/b2b/account/payments",
+    href: "/account/payments",
     label: "Make Payment",
     description: "Add funds via Razorpay or bank transfer",
     icon: CreditCard,
   },
   {
-    href: "/b2b/account/invoices",
+    href: "/account/invoices",
     label: "Invoices",
     description: "Per-booking invoices, export to CSV",
     icon: Receipt,
   },
   {
-    href: "/b2b/account/bank-accounts",
+    href: "/account/bank-accounts",
     label: "Bank Accounts",
     description: "Payee accounts for bank transfer",
     icon: Building2,

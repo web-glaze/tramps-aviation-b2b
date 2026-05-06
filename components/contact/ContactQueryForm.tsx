@@ -40,10 +40,10 @@ const API_BASE =
  */
 const TOPICS = [
   { label: "General enquiry",      type: "general",       bookingRelated: false, requiresLogin: false },
-  { label: "Booking issue",        type: "booking_help",  bookingRelated: true,  requiresLogin: false },
-  { label: "Refund / cancellation",type: "refund",        bookingRelated: true,  requiresLogin: false },
-  { label: "Agent registration",   type: "agent_support", bookingRelated: false, requiresLogin: false },
-  { label: "Wallet / payments",    type: "agent_support", bookingRelated: true,  requiresLogin: false },
+  { label: "Booking issue",        type: "booking_help",  bookingRelated: true,  requiresLogin: true  },
+  { label: "Refund / cancellation",type: "refund",        bookingRelated: true,  requiresLogin: true  },
+  { label: "Agent registration",   type: "agent_support", bookingRelated: false, requiresLogin: true  },
+  { label: "Wallet / payments",    type: "agent_support", bookingRelated: true,  requiresLogin: true  },
   { label: "Other",                type: "other",         bookingRelated: false, requiresLogin: false },
 ] as const;
 
@@ -81,7 +81,24 @@ export function ContactQueryForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loggedIn, userName, userEmail]);
 
-  const topic = TOPICS[topicIdx];
+  // Topic visibility: agent-only topics (Booking issue, Refund, Agent
+  // registration, Wallet / payments) need login. Anonymous visitors see
+  // only "General enquiry" + "Other" — everything else requires an
+  // account so we can attach the enquiry to the right record. The list
+  // is recomputed on every login-state flip; topicIdx is reset below
+  // if the previously-selected topic becomes hidden.
+  const visibleTopics = useMemo(
+    () => TOPICS.filter((t) => loggedIn || !t.requiresLogin),
+    [loggedIn],
+  );
+
+  // Clamp topicIdx into the visible-topics range whenever the visible
+  // list shrinks (e.g. user logs out while having "Booking issue" picked).
+  useEffect(() => {
+    if (topicIdx >= visibleTopics.length) setTopicIdx(0);
+  }, [visibleTopics.length, topicIdx]);
+
+  const topic = visibleTopics[topicIdx] ?? visibleTopics[0];
 
   const charsLeft = useMemo(
     () => MESSAGE_MAX - message.length,
@@ -268,7 +285,7 @@ export function ContactQueryForm() {
             disabled={step === "loading"}
             className="mt-1 w-full h-10 px-3 rounded-lg border border-border bg-background text-sm focus:ring-2 focus:ring-primary/40 focus:border-primary outline-none disabled:opacity-60"
           >
-            {TOPICS.map((t, i) => (
+            {visibleTopics.map((t, i) => (
               <option key={t.label} value={i}>{t.label}</option>
             ))}
           </select>
@@ -297,7 +314,7 @@ export function ContactQueryForm() {
               <Info className="h-3 w-3 flex-shrink-0 mt-0.5" />
               <span>
                 Tip:{" "}
-                <Link href="/b2b/login" className="text-primary font-semibold hover:underline">
+                <Link href="/login" className="text-primary font-semibold hover:underline">
                   Sign in
                 </Link>{" "}
                 first and we&apos;ll auto-link your booking — faster resolution.

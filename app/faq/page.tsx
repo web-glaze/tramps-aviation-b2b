@@ -12,7 +12,7 @@ const FALLBACK_HTML = `
 <h2>For travel agents (B2B)</h2>
 
 <h3>How do I become a registered agent?</h3>
-<p>Sign up at <a href="/b2b/register">b2b/register</a>, complete your KYC (PAN + GST + agency proof), and your account is active within 24 hours of approval.</p>
+<p>Sign up at <a href="/register">register</a>, complete your KYC (PAN + GST + agency proof), and your account is active within 24 hours of approval.</p>
 
 <h3>How does the wallet work?</h3>
 <p>Top up your wallet via Razorpay (instant) or bank transfer (manual, 30 min). Every booking is paid from the wallet — no per-booking gateway fee. Commission and refunds are credited back to the wallet automatically.</p>
@@ -48,7 +48,7 @@ const FALLBACK_HTML = `
 <h2>Support</h2>
 
 <h3>How do I contact support?</h3>
-<p>WhatsApp / email via the <a href="/b2b/help">help centre</a>. Average response time during business hours is under 30 minutes.</p>
+<p>WhatsApp / email via the <a href="/help">help centre</a>. Average response time during business hours is under 30 minutes.</p>
 `;
 
 export default function FaqPage() {

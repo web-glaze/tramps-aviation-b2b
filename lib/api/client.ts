@@ -80,7 +80,7 @@ apiClient.interceptors.response.use(
     // Skip 401-driven session-expiry handling on pages that don't actually
     // require auth. If we don't list a public page here a search call from
     // /flights, /hotels, /insurance or /series-fare will spuriously try to
-    // refresh the token, fail, and redirect anonymous visitors to /b2b/login.
+    // refresh the token, fail, and redirect anonymous visitors to /login.
     const isPublicPath =
       path === "/" ||
       path.includes("/login") ||
@@ -170,15 +170,10 @@ apiClient.interceptors.response.use(
             .catch(() => {});
 
           setTimeout(() => {
-            // We only ship a B2B portal at the moment — there's no /b2c/login
-            // route. Anyone caught here on a non-/b2b path is on a public
-            // marketing page and shouldn't be force-logged-out either; we
-            // send them home so they can decide where to go next.
-            if (window.location.pathname.startsWith("/b2b")) {
-              window.location.href = "/b2b/login";
-            } else {
-              window.location.href = "/";
-            }
+            // Single-app deployment — every authenticated route lives on
+            // this domain, so on session expiry just bounce everyone to
+            // /login regardless of where they were.
+            window.location.href = "/login";
           }, 4500);
         }
         return Promise.reject(refreshError);

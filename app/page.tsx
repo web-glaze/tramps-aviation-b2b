@@ -1,28 +1,5 @@
 "use client";
 
-/**
- * app/page.tsx — Tramps Aviation B2B public landing page
- *
- * Goals
- *  - A real home page (not just a redirect). Clicking "Home" brings you here.
- *  - Public-facing marketing for both travelers and travel agents.
- *  - Honors the brand palette: ~80% azure blue (primary, calm) + ~20% orange
- *    (energy, CTAs, prices). Orange is reserved for: prices, "Book Now"-style
- *    CTAs, agent-portal call-out, exclusive badges.
- *  - Login / register flows still redirect to /b2b/dashboard themselves —
- *    we don't auto-redirect here, so even authenticated users can revisit.
- *
- * Sections (top → bottom)
- *  1. Hero with search widget (Flights / Hotels / Insurance / Series Fare tabs)
- *  2. Hero stats strip
- *  3. Major airlines we cover
- *  4. Why Tramps Aviation — 6 feature cards
- *  5. For travel professionals — B2B portal pitch with mock metrics
- *  6. Customer reviews
- *  7. Contact CTAs
- *  8. CommonFooter
- */
-
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -89,6 +66,14 @@ function HeroSearch() {
   const [checkOut, setCheckOut] = useState(tomorrowISO());
   const [guests, setGuests] = useState(2);
 
+  // Insurance-specific — kept structurally parallel to flights/hotels so
+  // the search card stays the same height when the visitor flips between
+  // tabs (no jarring shrink when "Insurance" is selected).
+  const [tripScope, setTripScope] = useState<"domestic" | "international">("domestic");
+  const [travelers, setTravelers] = useState(1);
+  const [tripStart, setTripStart] = useState(todayISO());
+  const [tripEnd, setTripEnd] = useState(tomorrowISO());
+
   const handleSearch = () => {
     if (tab === "flights") {
       const q = new URLSearchParams({
@@ -115,7 +100,15 @@ function HeroSearch() {
       });
       router.push(`/hotels?${q.toString()}`);
     } else if (tab === "insurance") {
-      router.push("/insurance");
+      // Pass the chosen quick-filters along — the /insurance page can use
+      // them to pre-filter the plan list (no-op if not implemented yet).
+      const q = new URLSearchParams({
+        scope: tripScope,
+        travelers: String(travelers),
+        startDate: tripStart,
+        endDate: tripEnd,
+      });
+      router.push(`/insurance?${q.toString()}`);
     }
   };
 
@@ -267,12 +260,66 @@ function HeroSearch() {
       )}
 
       {tab === "insurance" && (
-        <div className="text-sm text-muted-foreground py-3 text-center">
-          Browse plans starting at{" "}
-          <span className="font-bold text-[hsl(var(--brand-orange))]">
-            ₹299
-          </span>{" "}
-          per person — full coverage from Bajaj Allianz.
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <Field label="Trip type">
+            <FieldIcon>
+              <ShieldCheck />
+            </FieldIcon>
+            <select
+              value={tripScope}
+              onChange={(e) =>
+                setTripScope(e.target.value as "domestic" | "international")
+              }
+              className="w-full bg-transparent outline-none text-sm font-semibold"
+            >
+              <option value="domestic">Domestic</option>
+              <option value="international">International</option>
+            </select>
+          </Field>
+          <Field label="Travelers">
+            <FieldIcon>
+              <Users />
+            </FieldIcon>
+            <input
+              type="number"
+              min={1}
+              max={10}
+              value={travelers}
+              onChange={(e) =>
+                setTravelers(
+                  Math.min(
+                    10,
+                    Math.max(1, parseInt(e.target.value || "1", 10)),
+                  ),
+                )
+              }
+              className="w-full bg-transparent outline-none text-sm"
+            />
+          </Field>
+          <Field label="Start date">
+            <FieldIcon>
+              <CalendarDays />
+            </FieldIcon>
+            <input
+              type="date"
+              min={todayISO()}
+              value={tripStart}
+              onChange={(e) => setTripStart(e.target.value)}
+              className="w-full bg-transparent outline-none text-sm"
+            />
+          </Field>
+          <Field label="End date">
+            <FieldIcon>
+              <CalendarDays />
+            </FieldIcon>
+            <input
+              type="date"
+              min={tripStart}
+              value={tripEnd}
+              onChange={(e) => setTripEnd(e.target.value)}
+              className="w-full bg-transparent outline-none text-sm"
+            />
+          </Field>
         </div>
       )}
 
@@ -387,7 +434,9 @@ function ReviewCard({ r }: { r: Review }) {
           {r.context}
         </span>
       </div>
-      <p className="text-sm text-foreground leading-relaxed">&ldquo;{r.body}&rdquo;</p>
+      <p className="text-sm text-foreground leading-relaxed">
+        &ldquo;{r.body}&rdquo;
+      </p>
       <p className="text-xs text-muted-foreground mt-3 font-medium">
         — {r.meta}
       </p>
@@ -486,7 +535,7 @@ export default function HomePage() {
                 "radial-gradient(circle at 20% 30%, hsl(var(--primary) / 0.15), transparent 40%), radial-gradient(circle at 80% 70%, hsl(var(--brand-orange) / 0.10), transparent 40%)",
             }}
           />
-          <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-12 pb-16 sm:pt-16 sm:pb-20">
+          <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-12 pb-14 sm:pt-16 sm:pb-16">
             <div className="text-center max-w-3xl mx-auto mb-10">
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground leading-[1.1]">
                 Tramps Aviation Smarter,
@@ -516,50 +565,107 @@ export default function HomePage() {
               <HeroSearch />
             </div>
 
-            {/* Quick stats below search */}
-            <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto">
-              {[
-                {
-                  num: "2L+",
-                  label: "Happy Travelers",
-                  accent: "primary" as const,
-                },
-                {
-                  num: "500+",
-                  label: "Travel Agents",
-                  accent: "primary" as const,
-                },
-                { num: "200+", label: "Airlines", accent: "primary" as const },
-                {
-                  num: "₹50Cr+",
-                  label: "Bookings Processed",
-                  accent: "orange" as const,
-                },
-              ].map((s) => (
-                <div key={s.label} className="text-center">
-                  <p
-                    className={cn(
-                      "text-2xl sm:text-3xl font-extrabold",
-                      s.accent === "orange"
-                        ? "text-[hsl(var(--brand-orange))]"
-                        : "text-primary",
-                    )}
-                  >
-                    {s.num}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {s.label}
-                  </p>
-                </div>
-              ))}
+            {/* ── Quick stats below search ──────────────────────────
+                Pre-fix: this strip used to live twice on the home page —
+                once here under the hero and once again after the
+                feature-cards grid. The lower one was deleted; this is
+                now the single source of truth for the platform numbers. */}
+            <div className="mt-8 max-w-5xl mx-auto">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                {[
+                  {
+                    icon: Users,
+                    num: "2L+",
+                    label: "Happy Travelers",
+                    accent: "primary" as const,
+                  },
+                  {
+                    icon: BadgeCheck,
+                    num: "500+",
+                    label: "Travel Agents",
+                    accent: "primary" as const,
+                  },
+                  {
+                    icon: Plane,
+                    num: "200+",
+                    label: "Airlines",
+                    accent: "primary" as const,
+                  },
+                  {
+                    icon: TrendingUp,
+                    num: "₹50Cr+",
+                    label: "Bookings Processed",
+                    accent: "orange" as const,
+                  },
+                ].map((s) => {
+                  const isOrange = s.accent === "orange";
+                  return (
+                    <div
+                      key={s.label}
+                      className={cn(
+                        "group relative overflow-hidden rounded-2xl border bg-card/80 backdrop-blur p-4 sm:p-5 text-center transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg",
+                        isOrange
+                          ? "border-[hsl(var(--brand-orange))]/20 hover:shadow-[hsl(var(--brand-orange))]/10 hover:border-[hsl(var(--brand-orange))]/40"
+                          : "border-primary/15 hover:shadow-primary/10 hover:border-primary/30",
+                      )}
+                    >
+                      {/* Subtle radial sheen — visible only on hover */}
+                      <span
+                        className={cn(
+                          "pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity",
+                          isOrange
+                            ? "bg-[radial-gradient(ellipse_at_top,hsl(var(--brand-orange)/0.08),transparent_70%)]"
+                            : "bg-[radial-gradient(ellipse_at_top,hsl(var(--primary)/0.08),transparent_70%)]",
+                        )}
+                        aria-hidden="true"
+                      />
+
+                      <div className="relative">
+                        {/* Icon chip */}
+                        <div
+                          className={cn(
+                            "inline-flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl mb-2 sm:mb-3 transition-transform duration-200 group-hover:scale-110",
+                            isOrange
+                              ? "bg-[hsl(var(--brand-orange))]/10 text-[hsl(var(--brand-orange))] ring-1 ring-[hsl(var(--brand-orange))]/20"
+                              : "bg-primary/10 text-primary ring-1 ring-primary/20",
+                          )}
+                        >
+                          <s.icon className="h-5 w-5 sm:h-5.5 sm:w-5.5" aria-hidden="true" />
+                        </div>
+
+                        {/* Big number */}
+                        <p
+                          className={cn(
+                            "text-2xl sm:text-3xl lg:text-[2rem] font-black tracking-tight leading-none",
+                            isOrange
+                              ? "text-[hsl(var(--brand-orange))]"
+                              : "text-primary",
+                          )}
+                        >
+                          {s.num}
+                        </p>
+
+                        {/* Label */}
+                        <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground mt-1.5">
+                          {s.label}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </section>
 
         {/* ════════════════════════════════════════════════════════════
             AIRLINES STRIP
+            Unified vertical rhythm: every non-hero section uses
+            py-14 sm:py-16 for equal breathing room. The airlines strip
+            looks lighter than other sections because its inner card
+            keeps content visually compact.
         ════════════════════════════════════════════════════════════ */}
-        <section className="bg-muted/30 py-8 sm:py-10">
+        <section className="bg-muted/30 py-14 sm:py-16">
           <div className="max-w-5xl mx-auto px-4 sm:px-6">
             <div className="bg-card border border-border rounded-2xl px-6 py-5">
               <p className="text-center text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-3">
@@ -592,7 +698,7 @@ export default function HomePage() {
             so new visitors immediately understand the value proposition.
             Orange accent because this IS the brand's agent-conversion CTA.
         ════════════════════════════════════════════════════════════ */}
-        <section className="bg-muted/30 py-12 sm:py-16">
+        <section className="py-14 sm:py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
             <div className="rounded-3xl border border-[hsl(var(--brand-orange))]/30 bg-gradient-to-br from-[hsl(var(--brand-orange))]/8 via-[hsl(var(--brand-orange))]/3 to-primary/5 p-6 sm:p-8">
               <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6">
@@ -670,7 +776,7 @@ export default function HomePage() {
         {/* ════════════════════════════════════════════════════════════
             FEATURES — 80% blue accents, 20% orange accents
         ════════════════════════════════════════════════════════════ */}
-        <section className="bg-muted/30 py-12 sm:py-16">
+        <section className="bg-muted/30 py-14 sm:py-16">
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
             <div className="text-center mb-10">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-[11px] font-bold tracking-wide uppercase">
@@ -680,8 +786,8 @@ export default function HomePage() {
                 Everything you need to travel
               </h2>
               <p className="mt-3 text-sm sm:text-base text-muted-foreground max-w-xl mx-auto">
-                From booking to boarding — we&apos;ve got you covered at every step
-                of your journey.
+                From booking to boarding — we&apos;ve got you covered at every
+                step of your journey.
               </p>
             </div>
 
@@ -691,66 +797,19 @@ export default function HomePage() {
               ))}
             </div>
 
-            {/* Stats strip */}
-            <div className="mt-14 grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-4xl mx-auto">
-              {[
-                {
-                  icon: Users,
-                  num: "2,00,000+",
-                  label: "Happy Travelers",
-                  accent: "primary" as const,
-                },
-                {
-                  icon: BadgeCheck,
-                  num: "500+",
-                  label: "Agent Partners",
-                  accent: "primary" as const,
-                },
-                {
-                  icon: Plane,
-                  num: "200+",
-                  label: "Airlines",
-                  accent: "primary" as const,
-                },
-                {
-                  icon: TrendingUp,
-                  num: "₹50Cr+",
-                  label: "Bookings Processed",
-                  accent: "orange" as const,
-                },
-              ].map((s) => (
-                <div key={s.label} className="text-center">
-                  <s.icon
-                    className={cn(
-                      "h-5 w-5 mx-auto mb-2",
-                      s.accent === "orange"
-                        ? "text-[hsl(var(--brand-orange))]"
-                        : "text-primary",
-                    )}
-                  />
-                  <p
-                    className={cn(
-                      "text-2xl sm:text-3xl font-extrabold",
-                      s.accent === "orange"
-                        ? "text-[hsl(var(--brand-orange))]"
-                        : "text-primary",
-                    )}
-                  >
-                    {s.num}
-                  </p>
-                  <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">
-                    {s.label}
-                  </p>
-                </div>
-              ))}
-            </div>
+            {/* NOTE: the stats strip that used to live here was a
+                duplicate of the one under the hero search widget — same
+                4 numbers (Happy Travelers / Travel Agents / Airlines /
+                Bookings Processed). Removed to avoid showing the same
+                data twice on the page. The hero strip is the canonical
+                home for these numbers. */}
           </div>
         </section>
 
         {/* ════════════════════════════════════════════════════════════
             B2B PORTAL PITCH — orange accent (the headline 20% moment)
         ════════════════════════════════════════════════════════════ */}
-        <section className="py-12 sm:py-20">
+        <section className="py-14 sm:py-16">
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
               {/* Left: copy + CTAs */}
@@ -873,7 +932,7 @@ export default function HomePage() {
         {/* ════════════════════════════════════════════════════════════
             REVIEWS
         ════════════════════════════════════════════════════════════ */}
-        <section className="bg-muted/30 py-12 sm:py-16">
+        <section className="bg-muted/30 py-14 sm:py-16">
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
             <div className="text-center mb-10">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-[11px] font-bold tracking-wide uppercase">
@@ -897,7 +956,7 @@ export default function HomePage() {
         {/* ════════════════════════════════════════════════════════════
             CONTACT
         ════════════════════════════════════════════════════════════ */}
-        <section className="py-12 sm:py-20">
+        <section className="py-14 sm:py-16">
           {/* Pre-fix: outer was max-w-4xl (768px) — too narrow for the
               left contact-options + right form two-column layout. The
               form ended up squeezed into ~440px, causing field labels

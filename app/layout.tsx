@@ -1,11 +1,17 @@
-"use client";
-
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { Toaster } from "sonner";
-import { SettingsProvider } from "@/components/layout/SettingsProvider";
-import { DevPathBar } from "@/components/dev/DevPathBar";
+import { APP_NAME, APP_URL } from "@/config/app";
+import { RootProviders } from "@/components/layout/RootProviders";
+import { AgentShell } from "@/components/layout/AgentShell";
 
-// Anti-flash: reads tp-settings BEFORE first paint → no theme flicker
+/**
+ * Anti-flash inline script — reads the persisted `tp-settings` blob
+ * BEFORE the first paint and applies the dark/light class + theme
+ * data-attributes to <html>. Without this you see a flash of the
+ * default theme on every cold load. Must stay in <head> and must
+ * remain inline (no module imports) so the browser executes it
+ * before React hydrates.
+ */
 const ANTI_FLASH = `
 (function(){
   try{
@@ -35,6 +41,73 @@ const ANTI_FLASH = `
 })();
 `;
 
+// Next.js Metadata API — gets injected as <meta>, <link>, <title>,
+// OpenGraph and Twitter tags. Per-page `metadata` exports merge with
+// these via the `template`.
+export const metadata: Metadata = {
+  metadataBase: new URL(APP_URL),
+  title: {
+    default: `${APP_NAME} — Agent Portal`,
+    template: `%s | ${APP_NAME}`,
+  },
+  description:
+    `${APP_NAME} agent portal — wholesale fares for flights, hotels, ` +
+    "and travel insurance, with agent commission, wallet payments and " +
+    "instant ticketing for authorised travel agents in India.",
+  applicationName: APP_NAME,
+  authors: [{ name: APP_NAME }],
+  generator: "Next.js",
+  keywords: [
+    "B2B travel agent portal",
+    "wholesale flight fares",
+    "travel agency software",
+    "Tramps Aviation",
+    "agent commission",
+    "series fares",
+    "GDS booking",
+    "TBO Amadeus",
+  ],
+  referrer: "origin-when-cross-origin",
+  // Agent portal — keep it out of search indexes by default. Public
+  // marketing pages live on the B2C subdomain.
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: { index: false, follow: false },
+  },
+  icons: {
+    icon: [
+      { url: "/logo.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico" },
+    ],
+    apple: "/logo.svg",
+    other: [{ rel: "mask-icon", url: "/logo.svg", color: "#209ACD" }],
+  },
+  openGraph: {
+    type: "website",
+    siteName: APP_NAME,
+    title: `${APP_NAME} — Agent Portal`,
+    description:
+      "Wholesale fares, agent commission and instant ticketing for authorised travel agents.",
+    url: APP_URL,
+    locale: "en_IN",
+  },
+  twitter: {
+    card: "summary",
+    title: `${APP_NAME} — Agent Portal`,
+    description:
+      "Wholesale fares and instant ticketing for authorised travel agents.",
+  },
+  formatDetection: { email: false, address: false, telephone: false },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#209ACD",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({
   children,
 }: {
@@ -43,42 +116,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <title>Tramps Aviation — Agent Portal</title>
-        <meta
-          name="description"
-          content="Tramps Aviation B2B portal for travel agents."
-        />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        {/* Brand-blue theme colour (matches logo blue #209ACD) */}
-        <meta name="theme-color" content="#209ACD" />
-        {/* Favicons — point at the SVG logo for crisp rendering at any size */}
-        <link rel="icon" type="image/svg+xml" href="/logo.svg" />
-        <link rel="alternate icon" href="/favicon.ico" />
-        <link rel="mask-icon" href="/logo.svg" color="#209ACD" />
-        <link rel="apple-touch-icon" href="/logo.svg" />
         <script dangerouslySetInnerHTML={{ __html: ANTI_FLASH }} />
       </head>
       <body>
-        <SettingsProvider>
-          {children}
-          <DevPathBar />
-          <Toaster
-            position="top-right"
-            richColors
-            closeButton
-            toastOptions={{
-              style: {
-                borderRadius: "var(--radius)",
-                fontFamily: "var(--font-body, inherit)",
-                fontSize: "13px",
-                background: "hsl(var(--card))",
-                color: "hsl(var(--card-foreground))",
-                border: "1px solid hsl(var(--border))",
-              },
-              duration: 4000,
-            }}
-          />
-        </SettingsProvider>
+        <RootProviders>
+          <AgentShell>{children}</AgentShell>
+        </RootProviders>
       </body>
     </html>
   );

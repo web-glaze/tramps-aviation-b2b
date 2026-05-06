@@ -1,13 +1,6 @@
 "use client";
 
-/**
- * app/insurance/page.tsx — B2B Travel Insurance Plans
- * ────────────────────────────────────────────────────
- * Reused by B2B: app/b2b/insurance/page.tsx → dynamic(() => import("../../insurance/page"))
- *
- * Fetches available plans from GET /insurance/plans and allows agents to
- * issue a policy via POST /insurance/issue (after booking confirmation).
- */
+
 
 import { useState, useMemo } from "react";
 import {

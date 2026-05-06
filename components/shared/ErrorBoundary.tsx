@@ -80,7 +80,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
             Try again
           </button>
           <button
-            onClick={() => (window.location.href = "/b2b/dashboard")}
+            onClick={() => (window.location.href = "/dashboard")}
             className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border text-sm font-semibold hover:bg-muted transition-colors"
           >
             <Home className="h-4 w-4" />

@@ -1,13 +1,5 @@
 "use client";
 
-/**
- * app/hotels/page.tsx — B2B Hotel Search
- * ─────────────────────────────────────────
- * Reused by B2B: app/b2b/hotels/page.tsx → dynamic(() => import("../../hotels/page"))
- *
- * Search flow: city autocomplete → date picker → results → booking via wallet
- */
-
 import { useState, useEffect, useRef, useMemo, Suspense } from "react";
 import {
   Hotel,
@@ -131,17 +123,28 @@ function CitySearchInput({
   const handleInput = (v: string) => {
     setQuery(v);
     clearTimeout(timerRef.current);
-    if (v.length < 2) { setResults([]); setOpen(false); return; }
+    if (v.length < 2) {
+      setResults([]);
+      setOpen(false);
+      return;
+    }
     setLoading(true);
     timerRef.current = setTimeout(async () => {
       try {
         const res = await hotelsApi.searchCities(v);
         const d = unwrap(res) as any;
-        const list = Array.isArray(d) ? d : Array.isArray(d?.cities) ? d.cities : [];
+        const list = Array.isArray(d)
+          ? d
+          : Array.isArray(d?.cities)
+            ? d.cities
+            : [];
         setResults(list.slice(0, 8));
         setOpen(true);
-      } catch { /* silent */ }
-      finally { setLoading(false); }
+      } catch {
+        /* silent */
+      } finally {
+        setLoading(false);
+      }
     }, 350);
   };
 
@@ -170,7 +173,10 @@ function CitySearchInput({
               key={city.cityCode || city.code}
               type="button"
               onMouseDown={() => {
-                onChange({ code: city.cityCode || city.code, name: city.cityName || city.name });
+                onChange({
+                  code: city.cityCode || city.code,
+                  name: city.cityName || city.name,
+                });
                 setQuery(city.cityName || city.name);
                 setOpen(false);
               }}
@@ -178,7 +184,9 @@ function CitySearchInput({
             >
               <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
               <div>
-                <span className="font-medium">{city.cityName || city.name}</span>
+                <span className="font-medium">
+                  {city.cityName || city.name}
+                </span>
                 {city.countryName && (
                   <span className="text-muted-foreground text-xs ml-1">
                     · {city.countryName}
@@ -202,7 +210,9 @@ function Stars({ count }: { count: number }) {
           key={i}
           className={cn(
             "h-3.5 w-3.5",
-            i < count ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30",
+            i < count
+              ? "fill-amber-400 text-amber-400"
+              : "text-muted-foreground/30",
           )}
         />
       ))}
@@ -246,9 +256,9 @@ function HotelCard({
 
   // Per-night and total prices both run through the markup hook so the
   // expanded "Price Summary" stays internally consistent.
-  const priceFor       = useDisplayPrice("hotel");
-  const perNight       = priceFor(hotel.pricePerNight);
-  const total          = priceFor(totalPrice);
+  const priceFor = useDisplayPrice("hotel");
+  const perNight = priceFor(hotel.pricePerNight);
+  const total = priceFor(totalPrice);
 
   return (
     <div className="bg-card border border-border rounded-2xl overflow-hidden hover:shadow-md transition-shadow">
@@ -274,13 +284,14 @@ function HotelCard({
               </div>
             </div>
             <div className="text-right shrink-0">
-              <p className="text-lg font-bold">
-                {fmtINR(perNight.display)}
-              </p>
+              <p className="text-lg font-bold">{fmtINR(perNight.display)}</p>
               <p className="text-xs text-muted-foreground">per night</p>
               {perNight.applied && (
                 <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
-                  {fmtINR(perNight.base)} <span className="text-[hsl(var(--brand-orange))] font-semibold">+ {fmtINR(perNight.markup)}</span>
+                  {fmtINR(perNight.base)}{" "}
+                  <span className="text-[hsl(var(--brand-orange))] font-semibold">
+                    + {fmtINR(perNight.markup)}
+                  </span>
                 </p>
               )}
               {commission > 0 && (
@@ -316,7 +327,9 @@ function HotelCard({
               <span
                 className={cn(
                   "flex items-center gap-1 text-xs",
-                  hotel.refundable ? "text-emerald-500" : "text-muted-foreground",
+                  hotel.refundable
+                    ? "text-emerald-500"
+                    : "text-muted-foreground",
                 )}
               >
                 <Check className="h-3 w-3" />
@@ -346,7 +359,9 @@ function HotelCard({
             </div>
             {total.applied && (
               <div className="flex justify-between text-[11px] pt-1 border-t border-dashed border-border">
-                <span className="text-muted-foreground">Includes your markup</span>
+                <span className="text-muted-foreground">
+                  Includes your markup
+                </span>
                 <span className="text-[hsl(var(--brand-orange))] font-semibold">
                   +{fmtINR(total.markup)}
                 </span>
@@ -373,7 +388,11 @@ function HotelCard({
           onClick={() => setExpanded((v) => !v)}
           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
-          {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          {expanded ? (
+            <ChevronUp className="h-3.5 w-3.5" />
+          ) : (
+            <ChevronDown className="h-3.5 w-3.5" />
+          )}
           {expanded ? "Less" : "Details"}
         </button>
         {hotel.roomsAvailable !== undefined && hotel.roomsAvailable <= 5 && (
@@ -431,8 +450,14 @@ function HotelsPageContent() {
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Persist sort + min-star filters so they survive cross-page navigation.
-  const [sortBy,    setSortBy]    = usePersistedState<"price" | "rating">("tramps:hotels:sort",    "price");
-  const [minStars,  setMinStars]  = usePersistedState<number>           ("tramps:hotels:minStars", 0);
+  const [sortBy, setSortBy] = usePersistedState<"price" | "rating">(
+    "tramps:hotels:sort",
+    "price",
+  );
+  const [minStars, setMinStars] = usePersistedState<number>(
+    "tramps:hotels:minStars",
+    0,
+  );
 
   const nights = useMemo(() => {
     const d1 = new Date(form.checkIn);
@@ -448,35 +473,36 @@ function HotelsPageContent() {
   const runHotelSearch = async (p: {
     cityCode: string;
     cityName: string;
-    checkIn:  string;
+    checkIn: string;
     checkOut: string;
-    rooms:    number;
-    adults:   number;
+    rooms: number;
+    adults: number;
     children: number;
-    silent?:  boolean;
+    silent?: boolean;
   }) => {
     setLoading(true);
     setError(null);
     setSearched(true);
     try {
       const res = await searchApi.searchHotels({
-        cityCode:    p.cityCode,
-        cityName:    p.cityName,
-        checkIn:     toDisplayDate(p.checkIn),
-        checkOut:    toDisplayDate(p.checkOut),
-        rooms:       p.rooms,
-        adults:      p.adults,
-        children:    p.children,
+        cityCode: p.cityCode,
+        cityName: p.cityName,
+        checkIn: toDisplayDate(p.checkIn),
+        checkOut: toDisplayDate(p.checkOut),
+        rooms: p.rooms,
+        adults: p.adults,
+        children: p.children,
         nationality: "IN",
       });
       const d = unwrap(res) as any;
       const list: HotelResult[] = Array.isArray(d?.hotels)
         ? d.hotels
         : Array.isArray(d)
-        ? d
-        : [];
+          ? d
+          : [];
       setHotels(list);
-      if (list.length === 0 && !p.silent) toast.info("No hotels found for your search");
+      if (list.length === 0 && !p.silent)
+        toast.info("No hotels found for your search");
     } catch (err) {
       const msg = getErrorMessage(err, "Failed to search hotels");
       setError(msg);
@@ -506,15 +532,18 @@ function HotelsPageContent() {
   const urlSearchParams = useSearchParams();
   useEffect(() => {
     const qp = urlSearchParams;
-    const cityName  = qp.get("city")     || form.cityName  || "Mumbai";
-    const checkIn   = qp.get("checkIn")  || form.checkIn   || tomorrowISO();
+    const cityName = qp.get("city") || form.cityName || "Mumbai";
+    const checkIn = qp.get("checkIn") || form.checkIn || tomorrowISO();
     const checkOutQp = qp.get("checkOut");
-    const checkOut  = checkOutQp || form.checkOut || (() => {
-      const d = new Date(checkIn);
-      d.setDate(d.getDate() + 1);
-      return d.toISOString().split("T")[0];
-    })();
-    const guests    = Math.max(1, Number(qp.get("guests") || form.adults || 2));
+    const checkOut =
+      checkOutQp ||
+      form.checkOut ||
+      (() => {
+        const d = new Date(checkIn);
+        d.setDate(d.getDate() + 1);
+        return d.toISOString().split("T")[0];
+      })();
+    const guests = Math.max(1, Number(qp.get("guests") || form.adults || 2));
 
     // The hotel search backend wants a TBO city *code* (e.g. "100764").
     // The home-page widget only has the user-typed name — we'll trigger a
@@ -536,10 +565,10 @@ function HotelsPageContent() {
         cityName,
         checkIn,
         checkOut,
-        rooms:    form.rooms,
-        adults:   guests,
+        rooms: form.rooms,
+        adults: guests,
         children: form.children,
-        silent:   true,
+        silent: true,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -562,222 +591,264 @@ function HotelsPageContent() {
 
   return (
     <PublicPageChrome>
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-          <Hotel className="h-5 w-5 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold font-display">Hotels</h1>
-          <p className="text-sm text-muted-foreground">
-            Search and book hotels with instant wallet confirmation
-          </p>
-        </div>
-      </div>
-
-      {/* Markup status — shows whether agent's markup is being applied */}
-      <MarkupBanner product="hotel" />
-
-      {/* Search form */}
-      <form
-        onSubmit={handleSearch}
-        className="bg-card border border-border rounded-2xl p-5"
-      >
-        <div className="flex flex-wrap gap-4 items-end">
-          <CitySearchInput
-            value={{ code: form.cityCode, name: form.cityName }}
-            onChange={(v) =>
-              setForm((f) => ({ ...f, cityCode: v.code, cityName: v.name }))
-            }
-          />
-
-          {/* Check-in */}
-          <div className="space-y-1">
-            <label className="block text-xs font-medium text-muted-foreground">
-              Check-in
-            </label>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input
-                type="date"
-                value={form.checkIn}
-                min={todayISO()}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, checkIn: e.target.value }))
-                }
-                className="h-11 pl-10 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-primary transition-colors"
-              />
-            </div>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Hotel className="h-5 w-5 text-primary" />
           </div>
-
-          {/* Check-out */}
-          <div className="space-y-1">
-            <label className="block text-xs font-medium text-muted-foreground">
-              Check-out
-            </label>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input
-                type="date"
-                value={form.checkOut}
-                min={form.checkIn}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, checkOut: e.target.value }))
-                }
-                className="h-11 pl-10 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-primary transition-colors"
-              />
-            </div>
+          <div>
+            <h1 className="text-2xl font-bold font-display">Hotels</h1>
+            <p className="text-sm text-muted-foreground">
+              Search and book hotels with instant wallet confirmation
+            </p>
           </div>
+        </div>
 
-          {/* Rooms & Guests */}
-          <div className="space-y-1">
-            <label className="block text-xs font-medium text-muted-foreground">
-              Rooms & Guests
-            </label>
-            <div className="flex items-center gap-3 h-11 px-4 rounded-xl border border-border bg-background text-sm">
-              <div className="flex items-center gap-2">
-                <BedDouble className="h-4 w-4 text-muted-foreground" />
-                <button type="button" onClick={() => setForm((f) => ({ ...f, rooms: Math.max(1, f.rooms - 1) }))} className="h-5 w-5 rounded-full border border-border flex items-center justify-center text-xs">−</button>
-                <span className="w-4 text-center">{form.rooms}</span>
-                <button type="button" onClick={() => setForm((f) => ({ ...f, rooms: Math.min(5, f.rooms + 1) }))} className="h-5 w-5 rounded-full border border-border flex items-center justify-center text-xs">+</button>
-              </div>
-              <div className="w-px h-5 bg-border" />
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <button type="button" onClick={() => setForm((f) => ({ ...f, adults: Math.max(1, f.adults - 1) }))} className="h-5 w-5 rounded-full border border-border flex items-center justify-center text-xs">−</button>
-                <span className="w-4 text-center">{form.adults}</span>
-                <button type="button" onClick={() => setForm((f) => ({ ...f, adults: Math.min(10, f.adults + 1) }))} className="h-5 w-5 rounded-full border border-border flex items-center justify-center text-xs">+</button>
+        {/* Markup status — shows whether agent's markup is being applied */}
+        <MarkupBanner product="hotel" />
+
+        {/* Search form */}
+        <form
+          onSubmit={handleSearch}
+          className="bg-card border border-border rounded-2xl p-5"
+        >
+          <div className="flex flex-wrap gap-4 items-end">
+            <CitySearchInput
+              value={{ code: form.cityCode, name: form.cityName }}
+              onChange={(v) =>
+                setForm((f) => ({ ...f, cityCode: v.code, cityName: v.name }))
+              }
+            />
+
+            {/* Check-in */}
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-muted-foreground">
+                Check-in
+              </label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="date"
+                  value={form.checkIn}
+                  min={todayISO()}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, checkIn: e.target.value }))
+                  }
+                  className="h-11 pl-10 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-primary transition-colors"
+                />
               </div>
             </div>
+
+            {/* Check-out */}
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-muted-foreground">
+                Check-out
+              </label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="date"
+                  value={form.checkOut}
+                  min={form.checkIn}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, checkOut: e.target.value }))
+                  }
+                  className="h-11 pl-10 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-primary transition-colors"
+                />
+              </div>
+            </div>
+
+            {/* Rooms & Guests */}
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-muted-foreground">
+                Rooms & Guests
+              </label>
+              <div className="flex items-center gap-3 h-11 px-4 rounded-xl border border-border bg-background text-sm">
+                <div className="flex items-center gap-2">
+                  <BedDouble className="h-4 w-4 text-muted-foreground" />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((f) => ({
+                        ...f,
+                        rooms: Math.max(1, f.rooms - 1),
+                      }))
+                    }
+                    className="h-5 w-5 rounded-full border border-border flex items-center justify-center text-xs"
+                  >
+                    −
+                  </button>
+                  <span className="w-4 text-center">{form.rooms}</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((f) => ({
+                        ...f,
+                        rooms: Math.min(5, f.rooms + 1),
+                      }))
+                    }
+                    className="h-5 w-5 rounded-full border border-border flex items-center justify-center text-xs"
+                  >
+                    +
+                  </button>
+                </div>
+                <div className="w-px h-5 bg-border" />
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((f) => ({
+                        ...f,
+                        adults: Math.max(1, f.adults - 1),
+                      }))
+                    }
+                    className="h-5 w-5 rounded-full border border-border flex items-center justify-center text-xs"
+                  >
+                    −
+                  </button>
+                  <span className="w-4 text-center">{form.adults}</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((f) => ({
+                        ...f,
+                        adults: Math.min(10, f.adults + 1),
+                      }))
+                    }
+                    className="h-5 w-5 rounded-full border border-border flex items-center justify-center text-xs"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="h-11 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Search className="h-4 w-4" />
+              )}
+              Search Hotels
+            </button>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="h-11 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
-          >
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Search className="h-4 w-4" />
+          {searched && !loading && (
+            <p className="mt-3 text-xs text-muted-foreground">
+              {nights} night{nights > 1 ? "s" : ""} · {form.rooms} room
+              {form.rooms > 1 ? "s" : ""} · {form.adults} adult
+              {form.adults > 1 ? "s" : ""}
+            </p>
+          )}
+        </form>
+
+        {/* Loading */}
+        {loading && <HotelSkeleton />}
+
+        {/* Results */}
+        {!loading && searched && (
+          <>
+            {error && (
+              <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <p className="text-sm">{error}</p>
+              </div>
             )}
-            Search Hotels
-          </button>
-        </div>
 
-        {searched && !loading && (
-          <p className="mt-3 text-xs text-muted-foreground">
-            {nights} night{nights > 1 ? "s" : ""} · {form.rooms} room{form.rooms > 1 ? "s" : ""} · {form.adults} adult{form.adults > 1 ? "s" : ""}
-          </p>
+            {displayHotels.length > 0 && (
+              <>
+                {/* Filters — sticky on scroll */}
+                <div className="flex flex-wrap items-center gap-3 sticky top-20 z-20 bg-background/95 backdrop-blur-md py-3 -mx-2 px-2 border-b border-border/40">
+                  <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <Filter className="h-4 w-4" />
+                    {displayHotels.length} hotels
+                  </span>
+
+                  {/* Star filter */}
+                  <div className="flex gap-1 p-1 bg-muted/60 rounded-xl">
+                    {[0, 3, 4, 5].map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setMinStars(s)}
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
+                          minStars === s
+                            ? "bg-background shadow-sm text-foreground"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {s === 0 ? "All" : `${s}★+`}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="ml-auto flex gap-2">
+                    {(["price", "rating"] as const).map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setSortBy(s)}
+                        className={cn(
+                          "px-3 py-1.5 rounded-xl text-xs font-medium border transition-all",
+                          sortBy === s
+                            ? "border-primary text-primary bg-primary/5"
+                            : "border-border text-muted-foreground hover:border-primary/50",
+                        )}
+                      >
+                        {s === "price" ? "Lowest Price" : "Top Rated"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {displayHotels.map((h) => (
+                    <HotelCard
+                      key={h.hotelCode}
+                      hotel={h}
+                      nights={nights}
+                      onBook={handleBook}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+
+            {!error && displayHotels.length === 0 && (
+              <div className="py-16 text-center border border-dashed border-border rounded-2xl">
+                <Hotel className="h-12 w-12 mx-auto mb-3 text-muted-foreground/30" />
+                <p className="text-sm font-medium">No hotels found</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Try different dates, city, or fewer filters
+                </p>
+              </div>
+            )}
+          </>
         )}
-      </form>
 
-      {/* Loading */}
-      {loading && <HotelSkeleton />}
-
-      {/* Results */}
-      {!loading && searched && (
-        <>
-          {error && (
-            <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <p className="text-sm">{error}</p>
+        {/* Initial state */}
+        {!searched && !loading && (
+          <div className="py-16 text-center">
+            <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <Hotel className="h-8 w-8 text-primary" />
             </div>
-          )}
-
-          {displayHotels.length > 0 && (
-            <>
-              {/* Filters — sticky on scroll */}
-              <div className="flex flex-wrap items-center gap-3 sticky top-20 z-20 bg-background/95 backdrop-blur-md py-3 -mx-2 px-2 border-b border-border/40">
-                <span className="text-sm text-muted-foreground flex items-center gap-1.5">
-                  <Filter className="h-4 w-4" />
-                  {displayHotels.length} hotels
-                </span>
-
-                {/* Star filter */}
-                <div className="flex gap-1 p-1 bg-muted/60 rounded-xl">
-                  {[0, 3, 4, 5].map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => setMinStars(s)}
-                      className={cn(
-                        "px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
-                        minStars === s
-                          ? "bg-background shadow-sm text-foreground"
-                          : "text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      {s === 0 ? "All" : `${s}★+`}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="ml-auto flex gap-2">
-                  {(["price", "rating"] as const).map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => setSortBy(s)}
-                      className={cn(
-                        "px-3 py-1.5 rounded-xl text-xs font-medium border transition-all",
-                        sortBy === s
-                          ? "border-primary text-primary bg-primary/5"
-                          : "border-border text-muted-foreground hover:border-primary/50",
-                      )}
-                    >
-                      {s === "price" ? "Lowest Price" : "Top Rated"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                {displayHotels.map((h) => (
-                  <HotelCard
-                    key={h.hotelCode}
-                    hotel={h}
-                    nights={nights}
-                    onBook={handleBook}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-
-          {!error && displayHotels.length === 0 && (
-            <div className="py-16 text-center border border-dashed border-border rounded-2xl">
-              <Hotel className="h-12 w-12 mx-auto mb-3 text-muted-foreground/30" />
-              <p className="text-sm font-medium">No hotels found</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Try different dates, city, or fewer filters
-              </p>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* Initial state */}
-      {!searched && !loading && (
-        <div className="py-16 text-center">
-          <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-            <Hotel className="h-8 w-8 text-primary" />
+            <h3 className="font-semibold text-lg mb-2">Hotel Search</h3>
+            <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+              Search thousands of hotels across India and worldwide. Instant
+              confirmation with wallet payment.
+            </p>
           </div>
-          <h3 className="font-semibold text-lg mb-2">Hotel Search</h3>
-          <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-            Search thousands of hotels across India and worldwide. Instant confirmation with wallet payment.
-          </p>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
     </PublicPageChrome>
   );
 }
 
-// ─── Default export — Suspense wrapper required by Next.js ──────────────────
-// `useSearchParams()` inside a client component triggers a CSR-bailout error
-// during `next build` unless the consumer is wrapped in a Suspense boundary.
-// Fallback is `null` because the inner page handles its own loading states;
-// the wrapper exists only to satisfy the build.
 export default function HotelsPage() {
   return (
     <Suspense fallback={null}>

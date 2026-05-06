@@ -8,8 +8,8 @@
  * Auto-picks one of two visual modes from `usePathname()`:
  *
  *   ┌─ COMPACT MODE ─────────────────────────────────────────────────────┐
- *   │  Used on auth pages (/b2b/login, /b2b/register, /b2b/forgot-       │
- *   │  password, /b2b/reset-password, /b2b/kyc).                          │
+ *   │  Used on auth pages (/login, /register, /forgot-       │
+ *   │  password, /reset-password, /kyc).                          │
  *   │  Layout: thin bar — copyright + Home / Sign In / Register links     │
  *   │  + support email.                                                  │
  *   └────────────────────────────────────────────────────────────────────┘
@@ -48,11 +48,11 @@ import { useAuthStore, usePlatformStore } from "@/lib/store";
 
 // Routes that should use the compact footer.
 const COMPACT_PREFIXES = [
-  "/b2b/login",
-  "/b2b/register",
-  "/b2b/forgot-password",
-  "/b2b/reset-password",
-  "/b2b/kyc",
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/kyc",
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -71,18 +71,22 @@ export function Footer() {
 
 const COMPACT_LINKS = [
   { label: "Home", href: "/" },
-  { label: "Sign In", href: "/b2b/login" },
-  { label: "Register", href: "/b2b/register" },
+  { label: "Sign In", href: "/login" },
+  { label: "Register", href: "/register" },
 ];
 
 function CompactFooter() {
+  // Compact footer — three small bands, easy to scan, never competes with
+  // the auth/KYC form for attention. Full marketing footer is overkill on
+  // these pages (login/register/forgot-password/reset-password/kyc).
   return (
-    <footer className="bg-card/50 shadow-[0_-2px_8px_rgba(32,154,205,0.05)]">
-      <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
-        <span>
-          © {new Date().getFullYear()} Tramps Aviation B2B. All rights reserved.
+    <footer className="border-t border-border/50 bg-card/50 mt-auto">
+      <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <Shield className="h-3 w-3 text-emerald-500/70" aria-hidden="true" />
+          © {new Date().getFullYear()} {APP_NAME}. All rights reserved.
         </span>
-        <div className="flex items-center gap-4 flex-wrap justify-center">
+        <nav className="flex items-center gap-4 flex-wrap justify-center">
           {COMPACT_LINKS.map(({ label, href }) => (
             <Link
               key={label}
@@ -92,13 +96,25 @@ function CompactFooter() {
               {label}
             </Link>
           ))}
+          <Link
+            href="/privacy"
+            className="hover:text-foreground transition-colors"
+          >
+            Privacy
+          </Link>
+          <Link
+            href="/terms"
+            className="hover:text-foreground transition-colors"
+          >
+            Terms
+          </Link>
           <a
             href="mailto:support@trampsaviation.com"
             className="hover:text-foreground transition-colors"
           >
             support@trampsaviation.com
           </a>
-        </div>
+        </nav>
       </div>
     </footer>
   );
@@ -121,10 +137,10 @@ const NAV_COLUMNS = [
   {
     title: "Agent",
     links: [
-      { href: "/b2b/login", label: "Agent Login" },
-      { href: "/b2b/register", label: "Register as Agent" },
-      { href: "/b2b/dashboard", label: "Dashboard" },
-      { href: "/b2b/wallet", label: "My Wallet" },
+      { href: "/login", label: "Agent Login" },
+      { href: "/register", label: "Register as Agent" },
+      { href: "/dashboard", label: "Dashboard" },
+      { href: "/wallet", label: "My Wallet" },
     ],
   },
   {
@@ -132,7 +148,7 @@ const NAV_COLUMNS = [
     links: [
       { href: "/faq", label: "FAQs" },
       { href: "/refund", label: "Refund Policy" },
-      { href: "/b2b/help", label: "Agent Support" },
+      { href: "/help", label: "Agent Support" },
     ],
   },
   {
@@ -162,17 +178,10 @@ function FullFooter() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Logged-in agents browsing /flights etc. should bounce to the /b2b/* mirror
-  // when clicking nav links — anonymous visitors stay on the public version.
-  const routeForContext = (href: string) => {
-    if (
-      role === "agent" &&
-      ["/flights", "/hotels", "/insurance", "/series-fare"].includes(href)
-    ) {
-      return `/b2b${href}`;
-    }
-    return href;
-  };
+  // All pages work for both agents and anonymous visitors. Agents are wrapped
+  // in AgentShell by the portal layout; visitors see the PublicPageChrome.
+  // No need for routing logic anymore.
+  const routeForContext = (href: string) => href;
 
   const name = ps.platformName || APP_NAME;
   const tagline = ps.platformTagline || "B2B Travel Agent Platform";
@@ -212,7 +221,7 @@ function FullFooter() {
           {/* Brand block (3 cols) */}
           <div className="lg:col-span-3 space-y-5">
             <Link
-              href={role === "agent" ? "/b2b/dashboard" : "/"}
+              href={role === "agent" ? "/dashboard" : "/"}
               className="flex items-center gap-3 w-fit group"
             >
               <div className="h-11 w-11 rounded-2xl overflow-hidden border border-border bg-white flex-shrink-0 shadow-sm">
