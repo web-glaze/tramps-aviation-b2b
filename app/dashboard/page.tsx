@@ -94,6 +94,35 @@ export default function B2BDashboard() {
     loadAll();
   }, []);
 
+  // ── Auto-refresh on tab refocus ──────────────────────────────────────
+  // When the agent makes a booking on another page and comes back, the
+  // wallet balance and recent-bookings list should reflect the new
+  // state — not the stale snapshot from when the dashboard last
+  // mounted. We refetch on:
+  //   1. Tab visibility change (switching back to this tab)
+  //   2. Window focus (clicking back into the window)
+  //   3. Page show via bfcache (back/forward navigation in browsers
+  //      that restore the JS state)
+  // Each fires `loadAll()`; since it's idempotent and uses
+  // Promise.allSettled, partial failures are absorbed silently.
+  useEffect(() => {
+    const onVisible = () => {
+      if (!document.hidden) loadAll();
+    };
+    const onFocus = () => loadAll();
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) loadAll();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("pageshow", onPageShow);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("pageshow", onPageShow);
+    };
+  }, []);
+
   const loadAll = async () => {
     setLoading(true);
     try {

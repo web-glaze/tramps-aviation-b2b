@@ -248,17 +248,43 @@ function FullHeader() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchIfStale(); }, []);
 
-  // Wallet balance — fetched once on mount
+  // ── Wallet balance — initial fetch + auto-refresh ──────────────────
+  // Pre-fix: the header pulled the wallet once on mount, so after the
+  // agent booked a fare on another page the header tooltip stayed on
+  // the OLD balance until a full reload. Same for the dashboard card,
+  // which is why the two often disagreed (e.g. one said ₹1,01,095 and
+  // the header tooltip said ₹1,06,145).
+  //
+  // We now re-pull on:
+  //   1. Initial mount
+  //   2. Route change (Next.js client-side navigation — `pathname`
+  //      changes whenever the agent moves to a new page, including
+  //      coming back to a page after confirming a booking)
+  //   3. Tab/window refocus (in case the agent did the booking in a
+  //      different tab)
+  //
+  // Idempotent — overlapping calls just race to set the same value.
   useEffect(() => {
-    (async () => {
+    let cancelled = false;
+    const refresh = async () => {
       try {
         const res = await agentApi.getWallet();
         const data = unwrap(res) as any;
         const balance = data?.balance ?? data?.walletBalance ?? 0;
-        setLiveBalance(Number(balance) || 0);
+        if (!cancelled) setLiveBalance(Number(balance) || 0);
       } catch { /* silent */ }
-    })();
-  }, []);
+    };
+    refresh();
+    const onVisible = () => { if (!document.hidden) refresh(); };
+    const onFocus = () => refresh();
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [pathname]);
 
   // Close dropdowns on outside click
   useEffect(() => {

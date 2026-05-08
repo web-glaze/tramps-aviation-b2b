@@ -67,10 +67,34 @@ export function SeriesFareBookingDialog({
     [fare.origin, fare.destination],
   );
 
+  // ── Cap passenger count to seats actually available ─────────────────
+  // Without this an agent who searched for 6 adults could open the
+  // dialog against a fare with only 4 seats left, fill in 6 passenger
+  // forms, and discover the over-booking only at the confirm step
+  // (backend reserveSeats rejects). We trim the requested count to the
+  // fare's `seatsAvailable` (defaulting to 9 when missing) and warn the
+  // agent immediately so they can either accept the smaller party or
+  // cancel and search a different fare.
+  const seatCap = Math.max(
+    1,
+    Number.isFinite(fare.seatsAvailable as number) && (fare.seatsAvailable as number) > 0
+      ? (fare.seatsAvailable as number)
+      : 9,
+  );
+  const cappedAdults = Math.min(Math.max(1, adults), seatCap);
+  useEffect(() => {
+    if (adults > seatCap) {
+      toast.warning(
+        `Only ${seatCap} seat(s) left on this fare — adjusted from ${adults} to ${seatCap}.`,
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── State ────────────────────────────────────────────────────────────
   const [step, setStep] = useState<Step>("passengers");
   const [passengers, setPassengers] = useState<Passenger[]>(() =>
-    Array.from({ length: Math.max(1, adults) }, () => ({
+    Array.from({ length: cappedAdults }, () => ({
       firstName: "", lastName: "", gender: "M" as const, dob: "",
       passportNo: "", passportExpiry: "", nationality: "IN",
     })),
