@@ -341,12 +341,36 @@ export default function B2BBookingDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params]);
 
+  // ── Send (resend) the e-ticket to the passenger ──────────────────
+  // Pre-fix: this was a fake placeholder that just waited 1s and showed
+  // a success toast — no email was ever sent. Agents thought re-sending
+  // worked when nothing was actually happening.
+  //
+  // Now: hits POST /bookings/:bookingRef/resend-email which re-sends
+  // the same branded confirmation email via the email service. The
+  // backend enforces a 60s cooldown per booking (anti-spam) and returns
+  // a 400 with a clear message if hit, so we surface that to the agent.
   const handleSendToPassenger = async () => {
-    if (!booking?.passengerEmail) return;
+    if (!booking?.bookingRef) return;
+    if (!booking?.passengerEmail) {
+      toast.error("This booking has no passenger email on file.");
+      return;
+    }
     setSending(true);
-    await new Promise(r => setTimeout(r, 1000));
-    toast.success(`Booking details sent to ${booking.passengerEmail}`);
-    setSending(false);
+    try {
+      const res = await agentApi.resendBookingEmail(booking.bookingRef);
+      const data = unwrap(res) as any;
+      const sentTo = data?.sentTo || booking.passengerEmail;
+      toast.success(`E-ticket re-sent to ${sentTo}`);
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Could not send e-ticket. Please try again.";
+      toast.error(msg);
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleCancel = async () => {

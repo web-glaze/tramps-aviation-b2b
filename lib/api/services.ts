@@ -98,6 +98,11 @@ export const agentApi = {
   // the controller scopes the lookup to the agent via `req.user.sub` for us.
   cancelBooking: (bookingRef: string, reason?: string) =>
     apiClient.post(`/bookings/${bookingRef}/cancel`, { reason }),
+  // Resend the booking confirmation e-ticket. `to` is optional — when
+  // provided the email goes to that address instead of the booking's
+  // saved contact email (useful when the original was wrong).
+  resendBookingEmail: (bookingRef: string, to?: string) =>
+    apiClient.post(`/bookings/${bookingRef}/resend-email`, to ? { to } : {}),
   // ── Booking: 2-step flow ──────────────────────────────────────────────────
   // Step 1: init booking (works for TBO live, Series/Custom fares, Mock)
   // The optional second arg is forwarded as the X-Idempotency-Key header so

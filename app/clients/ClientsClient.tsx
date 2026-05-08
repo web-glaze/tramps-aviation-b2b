@@ -105,36 +105,83 @@ export default function ClientsClient() {
   const [q, setQ] = useState("");
   const [sortBy, setSortBy] = useState<"recent" | "spend" | "bookings" | "name">("recent");
 
-  // Try the real API first; fall back to localStorage so the page is usable
-  // before the backend ships /api/agents/clients.
+  // ── API helpers ────────────────────────────────────────────────────
+  // We hit the real backend (`/api/agents/clients`) for every CRUD op
+  // now that the module ships. The page used to fall back to
+  // localStorage when the endpoint 404'd; we keep a *one-time* migration
+  // so any agent who built up clients on the old localStorage-only
+  // version doesn't lose them.
+  const apiBase = () =>
+    process.env.NEXT_PUBLIC_API_URL || "https://api.trampsaviation.com/api";
+  const authHeader = (): Record<string, string> => {
+    if (typeof window === "undefined") return {};
+    const token =
+      localStorage.getItem("auth_token") ||
+      localStorage.getItem("agent_token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+  const jsonHeaders = (): Record<string, string> => ({
+    "Content-Type": "application/json",
+    ...authHeader(),
+  });
+
+  // Map backend doc (`_id`) to frontend shape (`id`).
+  const fromServer = (d: any): Client => ({
+    ...d,
+    id: d._id || d.id,
+  });
+
+  // ── Initial load + one-time localStorage migration ─────────────────
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const apiBase =
-          process.env.NEXT_PUBLIC_API_URL ||
-          "https://api.trampsaviation.com/api";
-        const token =
-          typeof window !== "undefined"
-            ? localStorage.getItem("auth_token") ||
-              localStorage.getItem("agent_token")
-            : null;
-        const res = await fetch(`${apiBase}/agents/clients`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        const res = await fetch(`${apiBase()}/agents/clients`, {
+          headers: authHeader(),
         });
-        if (res.ok && !cancelled) {
-          const json = await res.json();
-          const d = json?.data || json;
-          if (Array.isArray(d) && d.length) {
-            setList(d);
-            setLoading(false);
-            return;
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        const d = json?.data || json;
+        const serverList: Client[] = Array.isArray(d) ? d.map(fromServer) : [];
+        if (cancelled) return;
+
+        // ── First-run migration ────────────────────────────────────
+        // If the server has nothing but local has entries, push them
+        // up so the agent's hand-built list isn't lost. Guarded by a
+        // sentinel key so we never re-import after the first success.
+        const migrated = localStorage.getItem(`${STORAGE_KEY}:migrated`);
+        if (!serverList.length && !migrated) {
+          try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            const local: Client[] = raw ? JSON.parse(raw) : [];
+            if (Array.isArray(local) && local.length) {
+              await fetch(`${apiBase()}/agents/clients/bulk`, {
+                method: "POST",
+                headers: jsonHeaders(),
+                body: JSON.stringify({ clients: local }),
+              });
+              const reload = await fetch(`${apiBase()}/agents/clients`, {
+                headers: authHeader(),
+              });
+              if (reload.ok) {
+                const j2 = await reload.json();
+                const d2 = j2?.data || j2;
+                if (Array.isArray(d2)) {
+                  setList(d2.map(fromServer));
+                  localStorage.setItem(`${STORAGE_KEY}:migrated`, "1");
+                  setLoading(false);
+                  return;
+                }
+              }
+            }
+          } catch {
+            /* migration is best-effort, never blocks the load */
           }
         }
+        setList(serverList);
       } catch {
-        /* fall through */
-      }
-      if (!cancelled) {
+        // Server unreachable — keep the page usable with local cache.
+        if (cancelled) return;
         try {
           const raw = localStorage.getItem(STORAGE_KEY);
           if (raw) {
@@ -146,7 +193,8 @@ export default function ClientsClient() {
         } catch {
           setList(FALLBACK_CLIENTS);
         }
-        setLoading(false);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
     return () => {
@@ -154,8 +202,10 @@ export default function ClientsClient() {
     };
   }, []);
 
-  const persist = (next: Client[]) => {
-    setList(next);
+  // Local mirror so offline / temporary network failures don't wipe the
+  // visible list if the agent reloads. The server stays the source of
+  // truth — this is just a cache.
+  const cacheLocal = (next: Client[]) => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     } catch {
@@ -163,26 +213,76 @@ export default function ClientsClient() {
     }
   };
 
-  const onSave = (c: Client) => {
-    const id = c.id || `c-${Date.now()}`;
-    const final = { ...c, id };
-    const exists = list.find((x) => x.id === id);
-    persist(exists ? list.map((x) => (x.id === id ? final : x)) : [...list, final]);
-    setShowForm(false);
-    setEditing(null);
-    toast.success(exists ? "Client updated" : "Client added");
+  const onSave = async (c: Client) => {
+    const isUpdate = !!c.id && list.some((x) => x.id === c.id);
+    try {
+      const url = isUpdate
+        ? `${apiBase()}/agents/clients/${c.id}`
+        : `${apiBase()}/agents/clients`;
+      const method = isUpdate ? "PUT" : "POST";
+      const res = await fetch(url, {
+        method,
+        headers: jsonHeaders(),
+        body: JSON.stringify(c),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.message || `Save failed (${res.status})`);
+      }
+      const saved = fromServer(await res.json());
+      const next = isUpdate
+        ? list.map((x) => (x.id === c.id ? saved : x))
+        : [...list, saved];
+      setList(next);
+      cacheLocal(next);
+      setShowForm(false);
+      setEditing(null);
+      toast.success(isUpdate ? "Client updated" : "Client added");
+    } catch (err: any) {
+      toast.error(err?.message || "Could not save client. Please try again.");
+    }
   };
 
-  const onDelete = (id: string) => {
+  const onDelete = async (id: string) => {
     if (!confirm("Remove this client?")) return;
-    persist(list.filter((c) => c.id !== id));
-    toast.success("Client removed");
+    // Optimistic update — rollback on failure.
+    const previous = list;
+    const next = list.filter((c) => c.id !== id);
+    setList(next);
+    cacheLocal(next);
+    try {
+      const res = await fetch(`${apiBase()}/agents/clients/${id}`, {
+        method: "DELETE",
+        headers: authHeader(),
+      });
+      if (!res.ok) throw new Error(`Delete failed (${res.status})`);
+      toast.success("Client removed");
+    } catch (err: any) {
+      setList(previous);
+      cacheLocal(previous);
+      toast.error(err?.message || "Could not remove client.");
+    }
   };
 
-  const onToggleStar = (id: string) => {
-    persist(
-      list.map((c) => (c.id === id ? { ...c, starred: !c.starred } : c)),
+  const onToggleStar = async (id: string) => {
+    const target = list.find((c) => c.id === id);
+    if (!target) return;
+    const nextStarred = !target.starred;
+    // Optimistic — flip locally first, then persist.
+    const next = list.map((c) =>
+      c.id === id ? { ...c, starred: nextStarred } : c,
     );
+    setList(next);
+    cacheLocal(next);
+    try {
+      await fetch(`${apiBase()}/agents/clients/${id}`, {
+        method: "PUT",
+        headers: jsonHeaders(),
+        body: JSON.stringify({ starred: nextStarred }),
+      });
+    } catch {
+      /* optimistic — server eventual consistency is fine for a star */
+    }
   };
 
   const filtered = useMemo(() => {
