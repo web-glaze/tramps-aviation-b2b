@@ -79,19 +79,45 @@ export function FilterPanel({
         {/* Price range */}
         {priceBounds.max > 0 && (
           <FilterSection title="Price Range">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>{fmtINR(priceBounds.min)}</span>
-              <span>Up to {fmtINR(maxPrice ?? priceBounds.max)}</span>
+            {/* Current cap — prominent so the agent can see what they've
+                set without having to read off the slider thumb. */}
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                Showing under
+              </span>
+              <span className="text-sm font-semibold text-primary tabular-nums">
+                {fmtINR(maxPrice ?? priceBounds.max)}
+              </span>
             </div>
+
             <input
               type="range"
               min={priceBounds.min}
               max={priceBounds.max}
-              step={Math.max(50, Math.round((priceBounds.max - priceBounds.min) / 100))}
+              // Step of 1 so the rightmost slider position lands EXACTLY on
+              // priceBounds.max — otherwise a coarse step (e.g. 136) snaps
+              // the cap to a value below the actual maximum fare and the
+              // most expensive fare disappears even though the user dragged
+              // the slider all the way right. Range inputs are smooth in
+              // modern browsers; step=1 doesn't hurt UX.
+              step={1}
               value={maxPrice ?? priceBounds.max}
-              onChange={(e) => onMaxPriceChange(Number(e.target.value))}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                // Treat "at or above the max" as "no cap" so the price
+                // filter never silently hides a valid fare.
+                onMaxPriceChange(v >= priceBounds.max ? priceBounds.max : v);
+              }}
               className="w-full accent-primary"
             />
+
+            {/* End-points — anchored to the actual range of the result set.
+                These NEVER change as the agent drags the slider, so they
+                act as stable reference points for what's available. */}
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground tabular-nums">
+              <span>{fmtINR(priceBounds.min)}</span>
+              <span>{fmtINR(priceBounds.max)}</span>
+            </div>
           </FilterSection>
         )}
 

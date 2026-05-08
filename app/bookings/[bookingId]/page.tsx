@@ -13,8 +13,35 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { toast } from "sonner";
 import { agentApi, unwrap } from "@/lib/api/services";
 import { usePlatformStore } from "@/lib/store";
+import { useAgentBranding } from "@/lib/hooks/useAgentBranding";
 
 const fmt = (n: number) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
+
+/**
+ * shadeHex — lighten or darken a hex colour by a percent amount.
+ *   shadeHex('#208dcb', -20)  → darker
+ *   shadeHex('#208dcb',  20)  → lighter
+ * Used to derive gradient end-points from the agent's single brand
+ * colour so the ticket header still has visual depth without forcing
+ * the agent to specify multiple shades on the /branding page.
+ */
+function shadeHex(hex: string, percent: number): string {
+  const m = (hex || "").trim().replace(/^#/, "");
+  const full =
+    m.length === 3 ? m.split("").map((c) => c + c).join("") : m;
+  if (full.length !== 6) return hex;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  const adjust = (c: number) => {
+    const t = percent < 0 ? 0 : 255;
+    const p = Math.abs(percent) / 100;
+    return Math.round((t - c) * p + c);
+  };
+  const toHex = (n: number) =>
+    Math.max(0, Math.min(255, n)).toString(16).padStart(2, "0");
+  return `#${toHex(adjust(r))}${toHex(adjust(g))}${toHex(adjust(b))}`;
+}
 const fmtDate = (d: string) => {
   if (!d) return "—";
   try { return new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }); }
@@ -146,12 +173,42 @@ function normalise(raw: any) {
  * relegated to the small "powered by" footnote on the right.
  */
 function PrintHeader({
-  logoUrl, companyName, agent, ps,
-}: { logoUrl: string; companyName: string; agent: any; ps: any }) {
-  // Prefer agent profile fields; fall back to platform settings if the
-  // agent hasn't filled their address/phone yet.
+  logoUrl, companyName, agent, ps, branding,
+}: {
+  logoUrl: string;
+  companyName: string;
+  agent: any;
+  ps: any;
+  /** White-label branding from /branding settings page; takes precedence
+   *  over agent profile fields when active. */
+  branding?: {
+    logoUrl?: string;
+    agencyName?: string;
+    supportPhone?: string;
+    supportEmail?: string;
+    primaryColor?: string;
+    websiteUrl?: string;
+    taglineText?: string;
+    isActive?: boolean;
+  };
+}) {
+  // Treat "saved" as "use it". The active toggle is for customer-facing
+  // surfaces only — the agent's own ticket print should respect whatever
+  // they typed at /branding regardless of toggle state.
+  const wl =
+    branding &&
+    (branding.logoUrl ||
+      branding.agencyName ||
+      branding.supportPhone ||
+      branding.supportEmail)
+      ? branding
+      : null;
+
+  // Resolution order:
+  //   per-booking override → white-label settings → agent profile → platform default
   const name =
     companyName ||
+    wl?.agencyName ||
     agent?.agencyName ||
     agent?.contactPerson ||
     ps?.platformName ||
@@ -163,24 +220,42 @@ function PrintHeader({
     [ps?.addressLine1, ps?.city, ps?.state, ps?.pincode]
       .filter(Boolean)
       .join(", ");
-  const phone = agent?.phone || ps?.supportPhoneDisplay || ps?.supportPhone || "";
-  const email = agent?.email || ps?.supportEmail || "";
+  const phone =
+    wl?.supportPhone || agent?.phone || ps?.supportPhoneDisplay || ps?.supportPhone || "";
+  const email = wl?.supportEmail || agent?.email || ps?.supportEmail || "";
+  const website = wl?.websiteUrl || "";
+  const tagline = wl?.taglineText || "";
+  const accent = wl?.primaryColor || "#208dcb";
   const gstNo = agent?.gstNumber || ps?.gstNumber || "";
   const agentId = agent?.agentId || "";
   if (!logoUrl && !name) return null;
   return (
-    <div className="hidden print:block mb-6 pb-5 border-b-2 border-gray-300">
+    <div
+      className="hidden print:block mb-6 pb-5 border-b-2"
+      style={{ borderColor: accent }}
+    >
       <div className="flex items-start gap-4">
         {logoUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={logoUrl} alt="Logo" className="h-14 w-auto object-contain rounded" />
         )}
         <div className="flex-1">
-          {name && <p className="text-xl font-black text-gray-900">{name}</p>}
+          {name && (
+            <p
+              className="text-xl font-black"
+              style={{ color: accent }}
+            >
+              {name}
+            </p>
+          )}
+          {tagline && (
+            <p className="text-[11px] italic text-gray-500 -mt-0.5">{tagline}</p>
+          )}
           {addr && <p className="text-xs text-gray-600 mt-0.5">{addr}</p>}
           <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1">
             {phone && <p className="text-xs text-gray-600">📞 {phone}</p>}
             {email && <p className="text-xs text-gray-600">✉ {email}</p>}
+            {website && <p className="text-xs text-gray-600">🌐 {website}</p>}
             {gstNo && <p className="text-xs text-gray-600">GST: {gstNo}</p>}
             {agentId && (
               <p className="text-xs text-gray-600">Agent ID: {agentId}</p>
@@ -188,7 +263,9 @@ function PrintHeader({
           </div>
         </div>
         <div className="text-right text-xs text-gray-500">
-          <p className="font-semibold text-gray-800">E-TICKET / ITINERARY</p>
+          <p className="font-semibold" style={{ color: accent }}>
+            E-TICKET / ITINERARY
+          </p>
           <p>Authorized Travel Agent</p>
           <p className="text-[10px] mt-0.5 text-gray-400">
             Powered by {ps?.platformName || "Tramps Aviation"}
@@ -202,6 +279,7 @@ function PrintHeader({
 export default function B2BBookingDetailPage() {
   const params = useParams();
   const { ps, fetchIfStale } = usePlatformStore();
+  const { branding, loaded: brandingLoaded } = useAgentBranding();
   const [booking,     setBooking]     = useState<any>(null);
   const [agent,       setAgent]       = useState<any>(null);
   const [loading,     setLoading]     = useState(true);
@@ -211,6 +289,23 @@ export default function B2BBookingDetailPage() {
   const [printLogoUrl,     setPrintLogoUrl]     = useState("");
   const [printCompanyName, setPrintCompanyName] = useState("");
   const logoInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-apply white-label branding from /branding settings.
+  // Per-booking override still works — agent can edit in the print modal
+  // without changing the saved default.
+  //
+  // Pre-fix: gated on `branding.isActive`, so agents who filled the form
+  // but didn't flip the toggle saw blank logo / company on every print.
+  // Now: as long as branding is saved (any field), we apply it. The
+  // toggle only controls customer-facing surfaces, not the agent's own
+  // ticket prints.
+  useEffect(() => {
+    if (!brandingLoaded) return;
+    if (!printLogoUrl && branding.logoUrl) setPrintLogoUrl(branding.logoUrl);
+    if (!printCompanyName && branding.agencyName)
+      setPrintCompanyName(branding.agencyName);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brandingLoaded, branding.logoUrl, branding.agencyName]);
 
   useEffect(() => {
     fetchIfStale();
@@ -294,6 +389,18 @@ export default function B2BBookingDetailPage() {
     </div>
   );
 
+  // ── Brand accent for the ticket header ─────────────────────────────
+  // When the agent has saved a primary colour on /branding, derive a
+  // dark→light gradient from it so the ticket reflects their brand. Else
+  // fall back to the platform's blue → orange palette.
+  const brandPrimary =
+    branding?.primaryColor && /^#[0-9a-f]{3,8}$/i.test(branding.primaryColor)
+      ? branding.primaryColor
+      : "";
+  const brandedGradient = brandPrimary
+    ? `linear-gradient(90deg, ${shadeHex(brandPrimary, -22)} 0%, ${brandPrimary} 60%, ${shadeHex(brandPrimary, 18)} 100%)`
+    : "linear-gradient(90deg, hsl(var(--brand-blue-dark)) 0%, hsl(var(--brand-blue)) 60%, hsl(var(--brand-orange)) 100%)";
+
   return (
     <div className="space-y-5 max-w-4xl mx-auto">
       {/* Page header */}
@@ -317,11 +424,93 @@ export default function B2BBookingDetailPage() {
         </div>
       </div>
 
-      {/* Action bar */}
+      {/* Action bar
+       *
+       * Pre-fix: every "Print E-Ticket" click opened the upload modal —
+       * even when the agent had configured their white-label branding.
+       * Then we gated on `branding.isActive`, but agents fill the form
+       * without flipping the toggle and still got the popup.
+       *
+       * Now: if the agent has *any* branding data saved (agency name,
+       * logo, support phone — anything), we skip the modal and print
+       * directly. The PrintHeader auto-applies whatever's saved. The
+       * `isActive` toggle only controls customer-facing usage; for the
+       * agent's own ticket print, "filled" is enough.
+       *
+       * Modal only shows for genuinely-empty branding (brand new agent
+       * who hasn't visited /branding yet) OR when the agent explicitly
+       * wants to override for a single print.
+       */}
       <div className="flex flex-wrap gap-2 print:hidden">
-        <Button onClick={() => setShowPrintSetup(true)} className="gap-2">
+        <Button
+          onClick={() => {
+            const hasAnyBranding =
+              branding?.logoUrl ||
+              branding?.agencyName ||
+              branding?.supportPhone ||
+              branding?.supportEmail;
+            if (hasAnyBranding) {
+              // ── Theme lock around window.print() ────────────────────
+              // Chromium can re-evaluate the document's colour scheme
+              // when the print preview opens AND when it closes. On
+              // some setups that flips a light-mode page to dark and
+              // leaves it that way after the dialog dismisses.
+              //
+              // We do three things in order:
+              //   1. Snapshot the current `dark` class state so we can
+              //      restore exactly what the agent had.
+              //   2. Force the document into a light render — strip the
+              //      `.dark` class AND set `color-scheme: light` inline
+              //      so the print preview can't override it.
+              //   3. On afterprint, restore the original state.
+              //
+              // We also guard with a setTimeout fallback because some
+              // browsers don't fire `afterprint` reliably (rare, but
+              // cheap to be safe).
+              const root = document.documentElement;
+              const wasDark = root.classList.contains("dark");
+              const prevColorScheme = root.style.colorScheme;
+              root.classList.remove("dark");
+              root.style.colorScheme = "light";
+
+              let restored = false;
+              const restore = () => {
+                if (restored) return;
+                restored = true;
+                if (wasDark) root.classList.add("dark");
+                else root.classList.remove("dark");
+                root.style.colorScheme = prevColorScheme || "";
+                window.removeEventListener("afterprint", restore);
+              };
+              window.addEventListener("afterprint", restore);
+              // Safety net: if afterprint doesn't fire within 60s, force
+              // restore so the agent isn't stuck in a forced-light page.
+              setTimeout(restore, 60_000);
+
+              // Direct print — branding auto-applies via PrintHeader
+              window.print();
+            } else {
+              // First-time / unconfigured agent — show the upload modal
+              setShowPrintSetup(true);
+            }
+          }}
+          className="gap-2"
+        >
           <TicketIcon className="h-4 w-4" /> Print E-Ticket
         </Button>
+        {(branding?.logoUrl ||
+          branding?.agencyName ||
+          branding?.supportPhone) && (
+          <Button
+            variant="outline"
+            onClick={() => setShowPrintSetup(true)}
+            className="gap-2 text-xs"
+            size="sm"
+            title="Override branding for this ticket only"
+          >
+            <ImagePlus className="h-3.5 w-3.5" /> Customize for this print
+          </Button>
+        )}
         <Button variant="outline" onClick={handleSendToPassenger} disabled={sending} className="gap-2">
           <Send className="h-4 w-4" /> {sending ? "Sending…" : "Send to Passenger"}
         </Button>
@@ -343,30 +532,69 @@ export default function B2BBookingDetailPage() {
       <div className="print-area">
 
       {/* Print-only company header (uses agent profile, not platform) */}
-      <PrintHeader logoUrl={printLogoUrl} companyName={printCompanyName} agent={agent} ps={ps} />
+      <PrintHeader logoUrl={printLogoUrl} companyName={printCompanyName} agent={agent} ps={ps} branding={branding} />
 
-      {/* Main ticket card */}
-      <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">
-        {/*
-          Pre-fix gradient: from-blue-700 to-indigo-700 — generic.
-          New gradient: brand blue (heavy) → brand orange accent on the
-          right edge. CSS variables --brand-blue and --brand-orange are
-          declared in globals.css so this restays in sync if the brand
-          colours change.
-        */}
+      {/* Main ticket card — header gradient is driven by the agent's
+          brand primary colour when /branding is configured (see
+          `brandedGradient` above), so the on-screen ticket matches the
+          colour scheme the agent expects from the live preview.
+
+          The whole ticket card is forced to a LIGHT palette via inline
+          styles. A printed ticket should look like a printed ticket on
+          screen too — not flip to dark-mode card styles when the agent
+          is in dark theme. The print-area header / footer chrome around
+          the card still respects the theme; only the card itself is
+          locked. */}
+      <div
+        className="border rounded-2xl overflow-hidden shadow-sm"
+        style={{
+          backgroundColor: "#ffffff",
+          color: "#0f172a",
+          colorScheme: "light",
+        }}
+      >
         <div
           className="px-6 py-4 flex items-center justify-between"
           style={{
-            background:
-              "linear-gradient(90deg, hsl(var(--brand-blue-dark)) 0%, hsl(var(--brand-blue)) 60%, hsl(var(--brand-orange)) 100%)",
+            background: brandedGradient,
+            // Force the browser to actually render the gradient on paper
+            // instead of stripping it for "save toner" mode. Without
+            // these two declarations the printed ticket header comes
+            // out plain white, which defeats the whole point of the
+            // agency-coloured strip.
+            WebkitPrintColorAdjust: "exact",
+            printColorAdjust: "exact",
           }}
         >
-          <div className="flex items-center gap-2">
-            <Plane className="h-5 w-5 text-white" />
-            <span className="font-bold text-white">{booking.type} · {booking.airline}</span>
-            <span className="text-white/80 text-sm font-mono">{booking.flightNo}</span>
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Agency logo when set on /branding — gives the on-screen
+                ticket the same look as the printed PDF. Falls back to
+                a Plane icon when no logo is uploaded so the header
+                doesn't look empty for unbranded agents. */}
+            {branding?.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={branding.logoUrl}
+                alt={branding.agencyName || "Agency"}
+                className="h-9 w-9 object-contain rounded bg-white/95 p-1 shrink-0"
+                style={{
+                  WebkitPrintColorAdjust: "exact",
+                  printColorAdjust: "exact",
+                }}
+              />
+            ) : (
+              <Plane className="h-5 w-5 text-white shrink-0" />
+            )}
+            {/* When the agent has saved an agency name, surface it here so
+                the on-screen header matches the printed/emailed ticket.
+                Falls back to "b2b" so unbranded agents see the same label
+                they did before. */}
+            <span className="font-bold text-white truncate">
+              {(branding?.agencyName || booking.type)} · {booking.airline}
+            </span>
+            <span className="text-white/80 text-sm font-mono shrink-0">{booking.flightNo}</span>
           </div>
-          <span className="text-xs bg-white/25 text-white font-semibold px-3 py-1 rounded-full uppercase">
+          <span className="text-xs bg-white/25 text-white font-semibold px-3 py-1 rounded-full uppercase shrink-0">
             {booking.status}
           </span>
         </div>
@@ -424,15 +652,41 @@ export default function B2BBookingDetailPage() {
             <div className="space-y-2">
               {booking.passengers.map((p: any, i: number) => (
                 <div key={i} className="flex items-center gap-3 bg-muted/30 rounded-xl p-3">
-                  <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <User className="h-4 w-4 text-primary" />
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center"
+                    style={
+                      brandPrimary
+                        ? { backgroundColor: `${brandPrimary}1A` /* ~10% alpha */ }
+                        : undefined
+                    }
+                  >
+                    <User
+                      className={brandPrimary ? "h-4 w-4" : "h-4 w-4 text-primary"}
+                      style={brandPrimary ? { color: brandPrimary } : undefined}
+                    />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-semibold">{p.name}</p>
                     <p className="text-xs text-muted-foreground">{p.type} · {p.gender} · DOB: {p.dob}</p>
                   </div>
                   {i === 0 && (
-                    <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold">Primary</span>
+                    <span
+                      className={
+                        brandPrimary
+                          ? "text-[10px] px-2 py-0.5 rounded-full font-semibold"
+                          : "text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold"
+                      }
+                      style={
+                        brandPrimary
+                          ? {
+                              backgroundColor: `${brandPrimary}1A`,
+                              color: brandPrimary,
+                            }
+                          : undefined
+                      }
+                    >
+                      Primary
+                    </span>
                   )}
                 </div>
               ))}
@@ -469,26 +723,50 @@ export default function B2BBookingDetailPage() {
           </div>
 
           {/* Issuer block — only visible in print. Pre-fix this showed
-              PLATFORM details; now shows AGENT details so the passenger
-              knows who to call back about their booking. */}
-          <div className="hidden print:block border-t pt-4 mt-4">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Issued By</p>
+              PLATFORM details; then AGENT details. Now we prefer the
+              agent's white-label /branding fields (agency name, phone,
+              email, website, tagline) over the registration-time agent
+              profile so the printed footer matches the on-screen
+              header and the live preview on /branding. The accent
+              border + colour come from branding.primaryColor too. */}
+          <div
+            className="hidden print:block border-t-2 pt-4 mt-4"
+            style={{ borderColor: brandPrimary || "#208dcb" }}
+          >
+            <p
+              className="text-xs font-semibold uppercase tracking-wider mb-2"
+              style={{ color: brandPrimary || "#208dcb" }}
+            >
+              Issued By
+            </p>
             <div className="text-xs text-gray-600 space-y-0.5">
               <p className="font-semibold text-gray-800">
-                {agent?.agencyName || agent?.contactPerson || ps?.platformName || ""}
+                {branding?.agencyName ||
+                  agent?.agencyName ||
+                  agent?.contactPerson ||
+                  ps?.platformName ||
+                  ""}
               </p>
+              {branding?.taglineText && (
+                <p className="italic text-gray-500">{branding.taglineText}</p>
+              )}
               {agent?.address && <p>{agent.address}</p>}
               {(agent?.city || agent?.state) && (
                 <p>{[agent?.city, agent?.state, agent?.pincode].filter(Boolean).join(", ")}</p>
               )}
               {agent?.gstNumber && <p>GST No: {agent.gstNumber}</p>}
               {agent?.panNumber && <p>PAN: {agent.panNumber}</p>}
-              {agent?.email && <p>Email: {agent.email}</p>}
-              {agent?.phone && <p>Phone: {agent.phone}</p>}
+              {(branding?.supportEmail || agent?.email) && (
+                <p>Email: {branding?.supportEmail || agent?.email}</p>
+              )}
+              {(branding?.supportPhone || agent?.phone) && (
+                <p>Phone: {branding?.supportPhone || agent?.phone}</p>
+              )}
+              {branding?.websiteUrl && <p>Website: {branding.websiteUrl}</p>}
               {agent?.agentId && <p>Agent ID: {agent.agentId}</p>}
-              {!agent && (
+              {!agent && !branding?.agencyName && (
                 <p className="text-gray-400 italic">
-                  (Update your agency profile in Settings to show your contact details here.)
+                  (Update your branding in /branding to show your contact details here.)
                 </p>
               )}
             </div>
@@ -510,13 +788,39 @@ export default function B2BBookingDetailPage() {
           <div className="relative bg-card border border-border rounded-2xl w-full max-w-sm shadow-2xl p-6 space-y-5">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-foreground">Print E-Ticket</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Optionally add your logo & agency name</p>
+                <h3 className="font-bold text-foreground">
+                  {branding.isActive && (branding.logoUrl || branding.agencyName)
+                    ? "Override branding for this ticket"
+                    : "Print E-Ticket"}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {branding.isActive && (branding.logoUrl || branding.agencyName)
+                    ? "Changes apply only to this print — your saved defaults aren't touched."
+                    : "Optionally add your logo & agency name. Save defaults at /branding to skip this step in future."}
+                </p>
               </div>
               <button onClick={() => setShowPrintSetup(false)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground">
                 <X className="h-4 w-4" />
               </button>
             </div>
+
+            {/* When branding is active, show a hint with link to edit defaults */}
+            {branding.isActive && (branding.logoUrl || branding.agencyName) && (
+              <div className="rounded-xl border border-emerald-300/50 bg-emerald-50 dark:bg-emerald-900/20 p-3 flex items-start gap-2">
+                <Info className="h-3.5 w-3.5 text-emerald-700 dark:text-emerald-400 shrink-0 mt-0.5" />
+                <div className="flex-1 text-xs text-emerald-700 dark:text-emerald-300 leading-relaxed">
+                  This ticket will use your white-label branding by default.
+                  Edit the defaults at{" "}
+                  <Link
+                    href="/branding"
+                    className="font-bold underline hover:text-emerald-800"
+                  >
+                    /branding
+                  </Link>
+                  , or override just for this ticket below.
+                </div>
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">

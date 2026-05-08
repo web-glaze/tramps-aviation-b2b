@@ -34,18 +34,33 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     borderRadius, compactMode, animations,
   } = useSettingsStore()
 
-  // Apply theme (light/dark/system) to <html>
+  // Apply theme to <html>.
+  //
+  // Pre-fix #1: a `prefers-color-scheme` listener auto-flipped dark mode
+  // whenever the OS toggled — agents complained their theme jumped at
+  // sunset.
+  // Pre-fix #2: even after killing the listener, if a user had
+  // `theme: 'system'` saved AND their OS preferred dark, opening +
+  // closing a `window.print()` dialog re-fired the effect and re-applied
+  // dark mode. So we now treat 'system' as a synonym for 'light' — the
+  // ONLY way the page goes dark is by the agent explicitly tapping the
+  // header toggle (which writes 'dark' to the store).
   useEffect(() => {
     const root = document.documentElement
-    if (theme === 'system') {
-      const mq = window.matchMedia('(prefers-color-scheme: dark)')
-      root.classList.toggle('dark', mq.matches)
-      const h = (e: MediaQueryListEvent) => root.classList.toggle('dark', e.matches)
-      mq.addEventListener('change', h)
-      return () => mq.removeEventListener('change', h)
-    } else {
+    root.classList.toggle('dark', theme === 'dark')
+  }, [theme])
+
+  // After print, re-apply the user's theme. Some Chromium builds drop the
+  // `dark` class or flip the document's color-scheme during the print
+  // simulation — this restores it the moment the dialog closes so the
+  // agent isn't left staring at an unexpected dark page.
+  useEffect(() => {
+    const onAfter = () => {
+      const root = document.documentElement
       root.classList.toggle('dark', theme === 'dark')
     }
+    window.addEventListener('afterprint', onAfter)
+    return () => window.removeEventListener('afterprint', onAfter)
   }, [theme])
 
   // Apply all data-* attributes — globals.css reads these for color, font, size, radius

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { Tag, AlertCircle, Filter } from "lucide-react";
 import { searchApi, unwrap } from "@/lib/api/services";
+import { AIRPORTS } from "./constants";
 import { getErrorMessage } from "@/lib/utils/errors";
 import { toast } from "sonner";
 import { MarkupBanner } from "@/components/shared/MarkupBanner";
@@ -102,17 +103,65 @@ function SeriesFarePageContent() {
   };
 
   /**
+   * resolveAirportCode — best-effort lookup of an IATA code from whatever
+   * the agent typed. Handles three common cases without forcing them to
+   * pick from the dropdown:
+   *   • "Bangalore (BLR)"  → BLR (paren pattern)
+   *   • "BLR"              → BLR (bare 3-letter code)
+   *   • "Bangalore"        → BLR (city / name match against catalogue)
+   *
+   * If we already have a confirmed `currentCode` from a prior dropdown
+   * pick, we trust it and short-circuit. Returns the typed code as-is
+   * (uppercased) when nothing matches, so the backend can still respond
+   * with a clear "no fares" message.
+   */
+  const resolveAirportCode = (label: string, currentCode: string): string => {
+    const text = (label || "").trim();
+    if (!text) return currentCode || "";
+
+    const paren = text.match(/\(([A-Z]{3})\)/i);
+    if (paren) return paren[1].toUpperCase();
+
+    const bare = text.match(/^([A-Z]{3})$/i);
+    if (bare) return bare[1].toUpperCase();
+
+    // If the visible label is the canonical "City (CODE)" form for the
+    // current code, the user hasn't changed it — keep what we have.
+    if (currentCode && text.toUpperCase().includes(`(${currentCode.toUpperCase()})`)) {
+      return currentCode.toUpperCase();
+    }
+
+    // Fall back to a fuzzy local lookup (city or airport name).
+    const q = text.toLowerCase();
+    const hit = AIRPORTS.find(
+      (a) =>
+        a.code.toLowerCase() === q ||
+        a.city.toLowerCase() === q ||
+        a.city.toLowerCase().startsWith(q) ||
+        a.name.toLowerCase().includes(q),
+    );
+    return (hit?.code || currentCode || text.toUpperCase()).toUpperCase();
+  };
+
+  /**
    * handleSearch — wraps `runSearch` for the form submit. Validates user
    * input first; the auto-search effect bypasses these checks because it
    * always calls `runSearch` with already-validated defaults.
    */
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!form.origin || !form.destination || !form.departureDate) {
+
+    // Re-resolve codes from labels at submit time so the search reflects
+    // what the agent currently sees in the inputs — not stale state from
+    // a previous selection.
+    const origin      = resolveAirportCode(form.originLabel,      form.origin);
+    const destination = resolveAirportCode(form.destinationLabel, form.destination);
+
+    if (!origin || !destination || !form.departureDate) {
       toast.error("Please fill in all search fields");
       return;
     }
-    if (form.origin === form.destination) {
+    if (origin === destination) {
       toast.error("Origin and destination cannot be the same");
       return;
     }
@@ -126,9 +175,16 @@ function SeriesFarePageContent() {
         return;
       }
     }
+
+    // Sync the resolved codes back into form state so subsequent renders
+    // (and the URL-aware auto-search) stay consistent.
+    if (origin !== form.origin || destination !== form.destination) {
+      setForm((f) => ({ ...f, origin, destination }));
+    }
+
     return runSearch({
-      origin:        form.origin,
-      destination:   form.destination,
+      origin,
+      destination,
       departureDate: form.departureDate,
       adults:        form.adults,
       tripType:      form.tripType,
@@ -233,8 +289,13 @@ function SeriesFarePageContent() {
       list = list.filter((f) => airlinesFilter.includes(f.airline || ""));
     }
 
-    // Price cap
-    if (maxPrice !== null) {
+    // Price cap — only apply when the user has actually moved the slider
+    // BELOW the current result-set's max. Otherwise a stale cap left over
+    // from a previous (cheaper) search would silently filter out every
+    // result of the new search before the cap useEffect has a chance to
+    // re-sync. Compare against priceBounds.max so we always show at least
+    // every fare that's at-or-below the most expensive fare in the result.
+    if (maxPrice !== null && maxPrice < priceBounds.max) {
       list = list.filter((f) => priceOf(f) <= maxPrice);
     }
 

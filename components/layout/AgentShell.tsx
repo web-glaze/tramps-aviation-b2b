@@ -73,12 +73,29 @@ export function AgentShell({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // No token (in store or localStorage) or wrong role → /login
+    // ── Authenticate ──────────────────────────────────────────────────────
+    //
+    // Pre-fix bug ("redirected to /login forever after clicking Go to
+    // Dashboard"): we used to bounce to /login whenever zustand's
+    // `isAuthenticated` was false even if a fresh JWT existed in
+    // localStorage. Zustand's persist middleware sometimes flips
+    // `_hasHydrated` to true *before* the rehydrated `isAuthenticated`
+    // value reaches React, so the gate read stale `false` and redirected,
+    // which then re-rendered the dashboard, which redirected again…
+    //
+    // The new rule: trust localStorage as the source of truth for
+    // "is there an auth token?". The role check only fires when the
+    // store explicitly says role is something OTHER than "agent" — a
+    // null/undefined role is treated as "probably-an-agent, trust the
+    // token". The API will 401 us out anyway if the token is invalid.
     const localToken =
       typeof window !== "undefined"
-        ? localStorage.getItem("auth_token")
+        ? localStorage.getItem("auth_token") ||
+          localStorage.getItem("agent_token")
         : null;
-    if ((!isAuthenticated && !localToken) || (role && role !== "agent")) {
+    const hasAuth = isAuthenticated || !!localToken;
+
+    if (!hasAuth) {
       const next =
         pathname && pathname !== "/login"
           ? `/login?redirect=${encodeURIComponent(pathname)}`
@@ -86,8 +103,22 @@ export function AgentShell({ children }: { children: React.ReactNode }) {
       router.replace(next);
       return;
     }
+    // Reject only customers explicitly logged in as B2C — never bounce
+    // when role is null/undefined because that's most often a hydration
+    // race (token's there, role hasn't propagated yet).
+    if (role === "customer") {
+      router.replace("/login");
+      return;
+    }
 
-    // Logged-in agent — gate on KYC.
+    // ── KYC gate ──────────────────────────────────────────────────────────
+    // Skip when there's no user object yet (race) — we'll re-check after
+    // hydration when the user data lands.
+    if (!user) {
+      setChecked(true);
+      return;
+    }
+
     const kycStatus = user?.kycStatus || user?.status || "";
     const kycApproved = kycStatus === "approved" || kycStatus === "active";
 
@@ -114,7 +145,11 @@ export function AgentShell({ children }: { children: React.ReactNode }) {
           }
         })
         .catch(() => {
-          router.replace("/kyc");
+          // On API failure, prefer NOT redirecting to /kyc — that traps
+          // approved agents whose KYC API momentarily errored. Render
+          // the dashboard; if a real KYC issue exists, the API call
+          // inside the page will surface it.
+          setChecked(true);
         });
       return;
     }

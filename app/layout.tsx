@@ -26,9 +26,21 @@ const ANTI_FLASH = `
         localStorage.setItem('tp-settings', JSON.stringify(s));
       }catch(e){}
     }
+    // Theme defaults to light. We deliberately ignore prefers-color-scheme
+    // so the theme doesn't flip mid-session when the OS auto-switches at
+    // sunset OR after closing a print dialog. ANY value other than 'dark'
+    // is treated as light — including the legacy 'system' value, which is
+    // also rewritten to 'light' so the next time the agent opens the app
+    // it stays clean.
     var t = st.theme || 'light';
-    var dark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    if(dark) document.documentElement.classList.add('dark');
+    if(t === 'system'){
+      try{
+        s.state = Object.assign({}, st, {theme:'light'});
+        localStorage.setItem('tp-settings', JSON.stringify(s));
+      }catch(e){}
+      t = 'light';
+    }
+    if(t === 'dark') document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
     var r = document.documentElement;
     r.setAttribute('data-color',     st.colorTheme   || 'brand');

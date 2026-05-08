@@ -9,6 +9,13 @@
 ════════════════════════════════════════════════════════ */
 
 :root {
+  /* Pin the browser to light scheme by default — without this, on systems
+     where the OS prefers dark, Chrome can flip form controls and scrollbars
+     to a dark scheme after window.print() returns, leaving the page looking
+     "dark" even though our theme class is still 'light'. The `.dark` class
+     overrides this back to dark when the agent explicitly opts in.       */
+  color-scheme: light;
+
   /* ── Tramps Aviation brand tokens ─────────────────────────────────────
      Sampled directly from `public/logo.svg`:
        Brand Blue   #209ACD  → hsl(198, 73%, 46%)   (≈80% of UI)
@@ -49,6 +56,10 @@
 }
 
 .dark {
+  /* When the agent explicitly picks dark, opt the document into the dark
+     color-scheme so form controls / scrollbars match. */
+  color-scheme: dark;
+
   --background: 222 24% 8%;
   --foreground: 210 18% 90%;
   --card: 222 22% 11%;

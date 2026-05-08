@@ -167,8 +167,12 @@ export const useAuthStore = create<AuthState>()(
       name: "tp-auth",
       onRehydrateStorage: () => (state) => {
         if (state) {
-          state.setHasHydrated(true);
+          // Order matters — set `isAuthenticated` BEFORE flipping
+          // `_hasHydrated`, otherwise consumers (AgentShell) wake up
+          // with `_hasHydrated: true` but `isAuthenticated: false`
+          // (the original default) and bounce the user to /login.
           state.isAuthenticated = !!(state.token && state.user);
+          state.setHasHydrated(true);
         }
       },
     },

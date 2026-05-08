@@ -19,23 +19,79 @@ function detectIdentifierType(value: string): string {
 
 export default function B2BLoginPage() {
   const router = useRouter();
-  const { setAuth, isAuthenticated, user, _hasHydrated } = useAuthStore();
+  const { setAuth, clearAuth, isAuthenticated, user, _hasHydrated } = useAuthStore();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
   const [identifierType, setIdentifierType] = useState("Agent ID / Phone");
 
-  // If the user is already signed in when they hit /login (e.g. they
-  // navigated here manually or refreshed after a successful login), bounce
-  // them to dashboard / KYC. Use a full-page navigation so middleware reads
-  // the cookie cleanly instead of getting stuck on the client cache.
+  // ─────────────────────────────────────────────────────────────────────
+  // Auth-state reconciliation when /login loads
+  //
+  // There's a tricky failure mode that produces an infinite redirect
+  // loop, which we have to actively defuse here:
+  //
+  //   1. User logs in. We write `auth_token` cookie + localStorage.
+  //   2. They keep the tab open or come back later. The cookie expires
+  //      (max-age 86400 = 24h) but localStorage tokens persist.
+  //   3. They click "Go to Dashboard" (or any protected link).
+  //   4. Edge middleware reads request cookies, sees no `auth_token`,
+  //      bounces them to `/login?redirect=/dashboard`.
+  //   5. Zustand-persist hydrates from localStorage → `isAuthenticated`
+  //      is still true → old code did `window.location.href = /dashboard`
+  //      → middleware bounces again → loop.
+  //
+  // The defuse: when /login mounts with `?redirect=…` but zustand says
+  // authenticated, we KNOW the cookie was missing (otherwise middleware
+  // wouldn't have sent us here). The localStorage state is stale. Clear
+  // it so the user gets a clean sign-in form instead of looping.
+  //
+  // Also: only auto-redirect to /dashboard if we can prove the cookie is
+  // present right now. Otherwise the dashboard request will round-trip
+  // back to us and start the loop.
   useEffect(() => {
-    if (_hasHydrated && isAuthenticated && user?.role === "agent") {
-      const kycApproved = user?.kycStatus === "approved" || user?.status === "active";
+    if (!_hasHydrated) return;
+    if (!isAuthenticated) return;
+
+    const hasRedirectParam =
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).has("redirect");
+
+    const cookieToken =
+      typeof document !== "undefined"
+        ? document.cookie.match(/(?:^|;\s*)auth_token=([^;]+)/)?.[1]
+        : undefined;
+
+    // Stale auth state — middleware bounced us OR cookie is gone. Clear
+    // everything so the form works normally.
+    if (hasRedirectParam || !cookieToken) {
+      try {
+        clearAuth?.();
+      } catch {
+        /* ignore */
+      }
+      try {
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("agent_token");
+      } catch {
+        /* ignore */
+      }
+      // Also explicitly clear the cookie in case a stub remained.
+      document.cookie =
+        "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      return;
+    }
+
+    // Only redirect when we have a fresh cookie AND a real agent role.
+    // A null/undefined role is treated as "still hydrating" — wait one
+    // more tick instead of misclassifying.
+    if (user?.role === "agent") {
+      const kycApproved =
+        user?.kycStatus === "approved" || user?.status === "active";
       window.location.href = kycApproved ? "/dashboard" : "/kyc";
     }
-  }, [_hasHydrated, isAuthenticated, user]);
+  }, [_hasHydrated, isAuthenticated, user, clearAuth]);
 
   const handleIdentifierChange = (val: string) => {
     setIdentifier(val);

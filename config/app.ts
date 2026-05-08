@@ -14,6 +14,8 @@ import {
   User,
   Users,
   BadgePercent,
+  Image as ImageIcon,
+  Contact,
 } from "lucide-react";
 import type { NavItem } from "@/types";
 
@@ -42,6 +44,8 @@ export const ROUTES = {
   B2B_SERIES_FARE: "/series-fare",
   B2B_SUBAGENTS: "/subagents",
   B2B_MARKUP: "/markup",
+  B2B_BRANDING: "/branding",
+  B2B_CLIENTS: "/clients",
   B2B_HELP: "/help",
   B2B_FORGOT_PASSWORD: "/forgot-password",
 } as const;
@@ -73,6 +77,8 @@ export const B2B_SIDEBAR_NAV: NavItem[] = [
 export const B2B_SIDEBAR_MORE: NavItem[] = [
   { label: "My Bookings", href: ROUTES.B2B_BOOKINGS, icon: BookOpen },
   { label: "Commission", href: ROUTES.B2B_COMMISSION, icon: TrendingUp },
+  { label: "Clients",     href: ROUTES.B2B_CLIENTS,   icon: Contact },
+  { label: "Branding",    href: ROUTES.B2B_BRANDING,  icon: ImageIcon },
   // { label: "Markup Tool", href: ROUTES.B2B_MARKUP,    icon: BadgePercent },
   // { label: "Sub-Agents",  href: ROUTES.B2B_SUBAGENTS, icon: Users },
   { label: "Reports",     href: ROUTES.B2B_REPORTS,   icon: BarChart3 },

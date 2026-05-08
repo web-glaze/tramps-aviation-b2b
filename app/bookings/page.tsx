@@ -204,7 +204,21 @@ export default function B2bBookingsPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3.5 font-mono text-xs">{b.pnr || '—'}</td>
-                      <td className="px-4 py-3.5 font-semibold">₹{(b.totalAmount || 0).toLocaleString('en-IN')}</td>
+                      <td className="px-4 py-3.5 font-semibold">
+                        ₹{(
+                          // Match the detail-page resolution order — list and
+                          // detail must agree on which field is the canonical
+                          // booking total. Backend returns it under
+                          // `fare.customerFare` for normal flows and
+                          // `fare.total` / `totalAmount` as legacy fallbacks.
+                          b.fare?.customerFare ??
+                          b.totalAmount ??
+                          b.fare?.total ??
+                          b.fare?.totalFare ??
+                          b.amount ??
+                          0
+                        ).toLocaleString('en-IN')}
+                      </td>
                       <td className="px-4 py-3.5">
                         <span className={cn('text-xs font-semibold px-2.5 py-1 rounded-full capitalize', STATUS_COLORS[b.status] || 'bg-muted text-muted-foreground')}>
                           {(b.status || 'pending').toLowerCase().replace('_', ' ')}

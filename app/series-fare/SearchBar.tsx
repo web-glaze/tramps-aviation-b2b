@@ -74,7 +74,7 @@ function AirportInput({
   }, []);
 
   return (
-    <div ref={ref} className="relative flex-1">
+    <div ref={ref} className="relative w-full sm:flex-1 sm:min-w-[180px]">
       <label className="block text-xs font-medium text-muted-foreground mb-1">
         {label}
       </label>
@@ -89,7 +89,19 @@ function AirportInput({
         className="w-full h-11 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-primary transition-colors placeholder:text-muted-foreground"
       />
       {open && filtered.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 z-30 bg-popover border border-border rounded-xl shadow-xl overflow-hidden">
+        <div
+          className="absolute top-full left-0 right-0 mt-1 z-50 border border-border rounded-xl shadow-2xl overflow-hidden max-h-72 overflow-y-auto"
+          style={{
+            minWidth: "min(260px, 100%)",
+            // The theme's `--card` token is stored as HSL channel components
+            // (e.g. "0 0% 100%"), so it must be wrapped with hsl(...) to be
+            // a valid CSS color. Without this, Tailwind's `bg-card` resolved
+            // correctly but our inline override fell back to transparent —
+            // producing the see-through dropdown the agent reported.
+            backgroundColor: "hsl(var(--card))",
+            backdropFilter: "none",
+          }}
+        >
           {filtered.map((a) => (
             <button
               key={a.code}
@@ -98,14 +110,15 @@ function AirportInput({
                 onSelect(a);
                 setOpen(false);
               }}
-              className="w-full text-left px-4 py-2.5 hover:bg-muted transition-colors flex items-center gap-3"
+              className="w-full text-left px-3 py-2.5 hover:bg-muted transition-colors flex items-center gap-3"
+              style={{ backgroundColor: "transparent" }}
             >
-              <span className="font-mono text-xs font-bold text-primary w-10">
+              <span className="font-mono text-xs font-bold text-primary w-10 shrink-0">
                 {a.code}
               </span>
-              <div>
-                <p className="text-sm font-medium">{a.city}</p>
-                <p className="text-xs text-muted-foreground truncate max-w-[220px]">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium truncate">{a.city}</p>
+                <p className="text-xs text-muted-foreground truncate">
                   {a.name}
                 </p>
               </div>
@@ -160,16 +173,25 @@ export function SearchBar({
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-4 items-end">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-3 sm:gap-4 lg:items-end">
         <AirportInput
           label="From"
           value={form.originLabel}
           placeholder="Delhi (DEL)"
           onChange={(v) =>
             onFormChange((f) => {
-              // Try to extract code from "(XXX)" pattern; otherwise leave origin untouched
-              const m = v.match(/\(([A-Z]{3})\)/i);
-              return { ...f, originLabel: v, origin: m ? m[1].toUpperCase() : f.origin };
+              // Resolve airport code from the typed text in three ways:
+              //   1) "City (XXX)" pattern from the autocomplete picker
+              //   2) Bare 3-letter IATA code (e.g. agent types "BLR")
+              //   3) Otherwise keep the previous code (label-only edit)
+              const paren = v.match(/\(([A-Z]{3})\)/i);
+              const bare  = v.trim().match(/^([A-Z]{3})$/i);
+              const code  = paren?.[1] || bare?.[1];
+              return {
+                ...f,
+                originLabel: v,
+                origin: code ? code.toUpperCase() : f.origin,
+              };
             })
           }
           onSelect={(a) =>
@@ -186,8 +208,14 @@ export function SearchBar({
           placeholder="Mumbai (BOM)"
           onChange={(v) =>
             onFormChange((f) => {
-              const m = v.match(/\(([A-Z]{3})\)/i);
-              return { ...f, destinationLabel: v, destination: m ? m[1].toUpperCase() : f.destination };
+              const paren = v.match(/\(([A-Z]{3})\)/i);
+              const bare  = v.trim().match(/^([A-Z]{3})$/i);
+              const code  = paren?.[1] || bare?.[1];
+              return {
+                ...f,
+                destinationLabel: v,
+                destination: code ? code.toUpperCase() : f.destination,
+              };
             })
           }
           onSelect={(a) =>
@@ -198,7 +226,7 @@ export function SearchBar({
             }))
           }
         />
-        <div className="space-y-1">
+        <div className="space-y-1 w-full sm:w-auto">
           <label className="block text-xs font-medium text-muted-foreground">
             Departure
           </label>
@@ -211,12 +239,12 @@ export function SearchBar({
               onChange={(e) =>
                 onFormChange((f) => ({ ...f, departureDate: e.target.value }))
               }
-              className="h-11 pl-10 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-primary transition-colors"
+              className="w-full h-11 pl-10 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-primary transition-colors"
             />
           </div>
         </div>
         {form.tripType === "RoundTrip" && (
-          <div className="space-y-1">
+          <div className="space-y-1 w-full sm:w-auto">
             <label className="block text-xs font-medium text-muted-foreground">
               Return
             </label>
@@ -229,16 +257,16 @@ export function SearchBar({
                 onChange={(e) =>
                   onFormChange((f) => ({ ...f, returnDate: e.target.value }))
                 }
-                className="h-11 pl-10 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-primary transition-colors"
+                className="w-full h-11 pl-10 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-primary transition-colors"
               />
             </div>
           </div>
         )}
-        <div className="space-y-1">
+        <div className="space-y-1 w-full sm:w-auto">
           <label className="block text-xs font-medium text-muted-foreground">
             Passengers
           </label>
-          <div className="flex items-center gap-2 h-11 px-3 rounded-xl border border-border bg-background">
+          <div className="flex items-center justify-between sm:justify-start gap-2 h-11 px-3 rounded-xl border border-border bg-background">
             <Users className="h-4 w-4 text-muted-foreground" />
             <button
               type="button"
@@ -260,7 +288,7 @@ export function SearchBar({
         <button
           type="submit"
           disabled={loading}
-          className="h-11 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
+          className="h-11 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2 col-span-1 sm:col-span-2 lg:col-span-1 w-full sm:w-auto"
         >
           {loading ? (
             <Loader2 className="h-4 w-4 animate-spin" />

@@ -80,6 +80,8 @@ const PAGE_TITLES: Record<string, string> = {
   "/commission": "Commission",
   "/markup":     "Markup Tool",
   "/subagents":  "Sub-Agent Management",
+  "/clients":    "Client CRM",
+  "/branding":   "White-label Branding",
   "/reports":    "Reports",
   "/profile":    "My Profile",
   "/help":       "Help & Support",
@@ -113,17 +115,34 @@ export function Header() {
 function CompactHeader({ pathname }: { pathname: string }) {
   const { isAuthenticated, _hasHydrated } = useAuthStore();
 
+  // Re-confirm "logged in" with a cookie check — zustand-persist only
+  // mirrors localStorage, but the actual auth signal middleware reads
+  // is the `auth_token` cookie. If localStorage says authenticated but
+  // the cookie has expired, showing "Go to Dashboard" would just send
+  // the user into the redirect loop the login page now defuses. Safer
+  // to hide the CTA in that case.
+  const [hasAuthCookie, setHasAuthCookie] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const cookieToken = document.cookie.match(
+      /(?:^|;\s*)auth_token=([^;]+)/,
+    )?.[1];
+    setHasAuthCookie(!!cookieToken);
+  }, [pathname]);
+
   // CTA selection logic, in priority order:
-  //   1. If the visitor is signed in → "Go to Dashboard" (orange brand accent)
+  //   1. If the visitor is signed in (zustand AND cookie still alive) →
+  //      "Go to Dashboard" (orange brand accent)
   //   2. On /login → "Register Free"
   //   3. On /register → "Sign In"
   //   4. Anywhere else (home, /flights, etc.) → both buttons
   //
-  // Anti-flicker: until the persisted store hydrates we *don't know* yet
-  // whether the visitor is logged in. Render nothing in the CTA slot during
-  // that brief window so we don't flash the wrong button. The slot itself
-  // is reserved with a min-width so the layout doesn't jump.
-  const showAuthedCTA    = _hasHydrated && isAuthenticated;
+  // Anti-flicker: until the persisted store hydrates AND we've sniffed
+  // the cookie, we *don't know* yet whether the visitor is logged in.
+  // Render nothing in the CTA slot during that brief window so we don't
+  // flash the wrong button.
+  const showAuthedCTA =
+    _hasHydrated && isAuthenticated && hasAuthCookie === true;
   const showOnlyRegister = pathname.startsWith("/login");
   const showOnlyLogin    = pathname.startsWith("/register");
 
@@ -143,9 +162,10 @@ function CompactHeader({ pathname }: { pathname: string }) {
         <div className="flex items-center gap-2 min-h-9">
           <ThemeToggle />
 
-          {/* Pre-hydration: render nothing in the CTA slot to avoid flashing
-              the wrong button before we know auth state. */}
-          {!_hasHydrated && null}
+          {/* Pre-hydration / pre-cookie-check: render nothing in the CTA
+              slot to avoid flashing the wrong button before we know auth
+              state. The min-h-9 wrapper above reserves the layout space. */}
+          {(!_hasHydrated || hasAuthCookie === null) && null}
 
           {showAuthedCTA && (
             <Link
@@ -156,7 +176,7 @@ function CompactHeader({ pathname }: { pathname: string }) {
             </Link>
           )}
 
-          {_hasHydrated && !showAuthedCTA && showOnlyRegister && (
+          {_hasHydrated && hasAuthCookie !== null && !showAuthedCTA && showOnlyRegister && (
             <>
               <span className="text-muted-foreground text-sm hidden sm:block">New agency?</span>
               <Link
@@ -168,7 +188,7 @@ function CompactHeader({ pathname }: { pathname: string }) {
             </>
           )}
 
-          {_hasHydrated && !showAuthedCTA && showOnlyLogin && (
+          {_hasHydrated && hasAuthCookie !== null && !showAuthedCTA && showOnlyLogin && (
             <>
               <span className="text-muted-foreground text-sm hidden sm:block">Already registered?</span>
               <Link
@@ -180,7 +200,7 @@ function CompactHeader({ pathname }: { pathname: string }) {
             </>
           )}
 
-          {_hasHydrated && !showAuthedCTA && !showOnlyRegister && !showOnlyLogin && (
+          {_hasHydrated && hasAuthCookie !== null && !showAuthedCTA && !showOnlyRegister && !showOnlyLogin && (
             <>
               <Link
                 href="/login"
