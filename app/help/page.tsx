@@ -20,7 +20,7 @@ import { toast } from "sonner";
 
 const API =
   process.env.NEXT_PUBLIC_API_URL ||
-  "http://13.207.25.212:8080/api";
+  "http://localhost:8080/api";
 
 const AGENT_FAQS = [
   {

@@ -29,7 +29,7 @@ import { usePlatformStore } from "@/lib/store";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ||
-  "http://13.207.25.212:8080/api";
+  "http://localhost:8080/api";
 
 interface CmsDoc {
   slug: string;
