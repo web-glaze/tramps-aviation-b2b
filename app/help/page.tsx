@@ -20,7 +20,7 @@ import { toast } from "sonner";
 
 const API =
   process.env.NEXT_PUBLIC_API_URL ||
-  "https://tramps-aviation-backend.onrender.com/api";
+  "http://13.207.25.212:8080/api";
 
 const AGENT_FAQS = [
   {

@@ -2,7 +2,7 @@ import axios, { AxiosRequestConfig } from "axios";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
-  "https://tramps-aviation-backend.onrender.com/api";
+  "http://13.207.25.212:8080/api";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const getToken = () =>

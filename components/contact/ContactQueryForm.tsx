@@ -31,7 +31,7 @@ import { useAuthStore } from "@/lib/store";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ||
-  "https://tramps-aviation-backend.onrender.com/api";
+  "http://13.207.25.212:8080/api";
 
 /**
  * Each topic carries the backend `type` enum value AND a flag for whether
