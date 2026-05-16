@@ -10,7 +10,11 @@ import { APP_URL } from "@/config/app";
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
 
-  const publicRoutes: { path: string; priority: number; changefreq: MetadataRoute.Sitemap[number]["changeFrequency"] }[] = [
+  const publicRoutes: {
+    path: string;
+    priority: number;
+    changefreq: MetadataRoute.Sitemap[number]["changeFrequency"];
+  }[] = [
     { path: "/login", priority: 1.0, changefreq: "monthly" },
     { path: "/register", priority: 0.9, changefreq: "monthly" },
     { path: "/forgot-password", priority: 0.4, changefreq: "yearly" },
